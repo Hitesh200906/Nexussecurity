@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile – Nexus Security</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        // Protect page: if not logged in, redirect to login
+        if (localStorage.getItem('nexusLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <!-- Background image as HTML element -->
+    <img src="image.jpeg" alt="Background" class="bg-image">
+
+    <nav class="navbar">
+        <div class="logo">
+            <h1>NEXUS SECURITY</h1>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#plans">Plans</a>
+            <div id="authButtonContainer"></div>
+        </div>
+    </nav>
+
+    <div class="profile-container">
+        <div class="profile-card">
+            <h2>My Profile</h2>
+            <div class="profile-info">
+                <p><strong>Name:</strong> <span id="profileName"></span></p>
+                <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+            </div>
+            <div class="scan-history">
+                <h3>Scan History</h3>
+                <div id="scanHistoryList">
+                    <p class="no-scans">No scans yet. Start a scan from the home page.</p>
+                </div>
+            </div>
+            <button id="logoutBtn" class="btn-logout">Logout</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

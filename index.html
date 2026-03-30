@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Nexus Security – AI Vulnerability Scanner</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        // Check login status from localStorage (simulate backend)
+        window.isLoggedIn = localStorage.getItem('nexusLoggedIn') === 'true';
+    </script>
+</head>
+<body>
+    <!-- Background image as HTML element -->
+    <img src="image.jpeg" alt="Background" class="bg-image">
+
+    <!-- Navbar (simple, no ghost) -->
+    <nav class="navbar">
+        <div class="logo">
+            <h1>NEXUS SECURITY</h1>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#plans">Plans</a>
+            <div id="authButtonContainer"></div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>AI‑Powered Scan</h1>
+            <p>Detect security flaws before attackers do. Get detailed reports with actionable fixes.</p>
+            <div class="buttons">
+                <button type="button" class="button" id="heroGetStarted">
+                    <span class="fold"></span>
+                    <div class="points_wrapper">
+                        <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+                        <i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i><i class="point"></i>
+                    </div>
+                    <span class="inner">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5">
+                            <polyline points="13.18 1.37 13.18 9.64 21.45 9.64 10.82 22.63 10.82 14.36 2.55 14.36 13.18 1.37"></polyline>
+                        </svg>
+                        Get Started
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scan Type Cards -->
+        <div class="scan-types">
+            <div class="type-card">
+                <i class="fas fa-search"></i>
+                <h3>Basic Scan</h3>
+                <p>2–3 vulnerabilities on first pages. Free, email report.</p>
+                <span class="tag">Ideal for quick checks</span>
+            </div>
+            <div class="type-card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Advanced Scan</h3>
+                <p>Full website crawl. Medium & low severity bugs. Detailed guide.</p>
+                <span class="tag">Most popular</span>
+            </div>
+            <div class="type-card">
+                <i class="fas fa-shield-virus"></i>
+                <h3>Protection+ Scan</h3>
+                <p>Deep scan entire site. All vulnerabilities, critical included. Compliance mapping.</p>
+                <span class="tag">Enterprise grade</span>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="info-stats">
+            <div class="info-item">
+                <i class="fas fa-chart-simple"></i>
+                <span class="info-number">99%</span>
+                <span class="info-label">Accuracy</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-clock"></i>
+                <span class="info-number">24h</span>
+                <span class="info-label">Report time</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-user-check"></i>
+                <span class="info-number">Profile</span>
+                <span class="info-label">Delivery</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Plans Section -->
+    <section class="plans-section" id="plans">
+        <h2>Choose Your Plan</h2>
+        <div class="plans-container">
+            <!-- Basic Plan -->
+            <div class="plan-card">
+                <div class="plan-icon"><i class="fas fa-search"></i></div>
+                <h3>Basic Scan</h3>
+                <div class="price">Free</div>
+                <ul class="features">
+                    <li><i class="fas fa-check-circle"></i> 2–3 vulnerabilities detected</li>
+                    <li><i class="fas fa-check-circle"></i> First 2‑3 pages only</li>
+                    <li><i class="fas fa-check-circle"></i> Email report delivery</li>
+                    <li><i class="fas fa-check-circle"></i> 10‑minute scan</li>
+                </ul>
+                <button class="btn-53 basic-start plan-select-btn" data-plan="basic">
+                    <div class="original">SELECT PLAN</div>
+                    <div class="letters">
+                        <span>S</span><span>E</span><span>L</span><span>E</span><span>C</span><span>T</span>
+                        <span>&nbsp;</span>
+                        <span>P</span><span>L</span><span>A</span><span>N</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Advanced Plan -->
+            <div class="plan-card popular advanced-card">
+                <div class="popular-badge">MOST POPULAR</div>
+                <div class="plan-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Advanced Scan</h3>
+                <div class="price">₹99 <span>/ scan</span></div>
+                <ul class="features">
+                    <li><i class="fas fa-check-circle"></i> Full website crawl</li>
+                    <li><i class="fas fa-check-circle"></i> Medium & low severity bugs</li>
+                    <li><i class="fas fa-check-circle"></i> Detailed remediation guide</li>
+                    <li><i class="fas fa-check-circle"></i> ~5 hours (500 pages)</li>
+                </ul>
+                <button class="btn-53 plan-select-btn" data-plan="advanced">
+                    <div class="original">SELECT PLAN</div>
+                    <div class="letters">
+                        <span>S</span><span>E</span><span>L</span><span>E</span><span>C</span><span>T</span>
+                        <span>&nbsp;</span>
+                        <span>P</span><span>L</span><span>A</span><span>N</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Protection+ Plan -->
+            <div class="plan-card">
+                <div class="plan-icon"><i class="fas fa-shield-virus"></i></div>
+                <h3>Protection+</h3>
+                <div class="price">₹999 <span>/ scan</span></div>
+                <ul class="features">
+                    <li><i class="fas fa-check-circle"></i> Deep‑scan entire website</li>
+                    <li><i class="fas fa-check-circle"></i> All vulnerabilities (incl. critical)</li>
+                    <li><i class="fas fa-check-circle"></i> Compliance mapping (OWASP, CWE)</li>
+                    <li><i class="fas fa-check-circle"></i> ~10 hours (500 pages)</li>
+                </ul>
+                <button class="btn-53 plan-select-btn" data-plan="protection_plus">
+                    <div class="original">SELECT PLAN</div>
+                    <div class="letters">
+                        <span>S</span><span>E</span><span>L</span><span>E</span><span>C</span><span>T</span>
+                        <span>&nbsp;</span>
+                        <span>P</span><span>L</span><span>A</span><span>N</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- URL Sections: One for each plan -->
+    <!-- Basic Scan Section -->
+    <div id="urlSectionBasic" class="url-section plan-url-section" style="display: none;" data-plan="basic">
+        <div class="url-container">
+            <h3>Basic Scan Details</h3>
+            <p>We'll verify ownership and send a confirmation email before starting the scan.</p>
+            <form class="scan-form">
+                <input type="hidden" name="plan" value="basic">
+                <div class="form-group">
+                    <input type="text" name="fullName" placeholder="Your Full Name" required>
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="role" placeholder="Your Role in Company (e.g., CEO, Developer)" required>
+                    <i class="fas fa-briefcase input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="companyName" placeholder="Company Name" required>
+                    <i class="fas fa-building input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="userEmail" placeholder="Your Email (for contact)" required>
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="url" name="websiteUrl" placeholder="Website URL (e.g., https://example.com)" required>
+                    <i class="fas fa-globe input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="businessEmail" placeholder="Business Email (e.g., admin@example.com)" required>
+                    <i class="fas fa-envelope-open-text input-icon"></i>
+                </div>
+                <button type="submit" class="btn-53">REQUEST SCAN</button>
+            </form>
+            <p class="url-note">* We'll send a confirmation email to the business email. The scan will start after you confirm.</p>
+        </div>
+    </div>
+
+    <!-- Advanced Scan Section -->
+    <div id="urlSectionAdvanced" class="url-section plan-url-section" style="display: none;" data-plan="advanced">
+        <div class="url-container">
+            <h3>Advanced Scan Details</h3>
+            <p>Advanced plan includes full website crawl and detailed remediation guide.</p>
+            <form class="scan-form">
+                <input type="hidden" name="plan" value="advanced">
+                <div class="form-group">
+                    <input type="text" name="fullName" placeholder="Your Full Name" required>
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="role" placeholder="Your Role in Company" required>
+                    <i class="fas fa-briefcase input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="companyName" placeholder="Company Name" required>
+                    <i class="fas fa-building input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="userEmail" placeholder="Your Email (for contact)" required>
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="url" name="websiteUrl" placeholder="Website URL" required>
+                    <i class="fas fa-globe input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="businessEmail" placeholder="Business Email" required>
+                    <i class="fas fa-envelope-open-text input-icon"></i>
+                </div>
+                <button type="submit" class="btn-53">REQUEST SCAN</button>
+            </form>
+            <p class="url-note">* We'll verify your business email and start the scan within minutes.</p>
+        </div>
+    </div>
+
+    <!-- Protection+ Scan Section -->
+    <div id="urlSectionProtection" class="url-section plan-url-section" style="display: none;" data-plan="protection_plus">
+        <div class="url-container">
+            <h3>Protection+ Scan Details</h3>
+            <p>Enterprise‑grade deep scan with compliance mapping and critical vulnerability detection.</p>
+            <form class="scan-form">
+                <input type="hidden" name="plan" value="protection_plus">
+                <div class="form-group">
+                    <input type="text" name="fullName" placeholder="Your Full Name" required>
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="role" placeholder="Your Role in Company" required>
+                    <i class="fas fa-briefcase input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="companyName" placeholder="Company Name" required>
+                    <i class="fas fa-building input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="userEmail" placeholder="Your Email (for contact)" required>
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="url" name="websiteUrl" placeholder="Website URL" required>
+                    <i class="fas fa-globe input-icon"></i>
+                </div>
+                <div class="form-group">
+                    <input type="email" name="businessEmail" placeholder="Business Email" required>
+                    <i class="fas fa-envelope-open-text input-icon"></i>
+                </div>
+                <button type="submit" class="btn-53">REQUEST SCAN</button>
+            </form>
+            <p class="url-note">* Strict ownership verification and confirmation email required.</p>
+        </div>
+    </div>
+
+    <!-- How Our AI Works Section -->
+    <section class="how-it-works">
+        <div class="how-container">
+            <div class="how-text">
+                <h2>How Our AI Works</h2>
+                <p>Our intelligent AI engine performs a deep, automated security audit. Here's the process:</p>
+                <ul>
+                    <li><h3>Link Analysis</h3><p>We start with your website's URL and automatically discover all internal links, forms, and entry points.</p></li>
+                    <li><h3>Page‑by‑Page Exploration</h3><p>The AI visits every page, clicks every button, and tests every interactive element just like a real user.</p></li>
+                    <li><h3>Vulnerability Detection</h3><p>We simulate real‑world attacks to uncover SQL injection, XSS, misconfigurations, and other security flaws.</p></li>
+                    <li><h3>Smart Reporting</h3><p>All findings are prioritised, with step‑by‑step fixes tailored to your selected plan.</p></li>
+                </ul>
+                <p class="report-note">You will receive your detailed report in HTML format directly on your profile page within 24 hours.</p>
+            </div>
+            <div class="how-video">
+                <video autoplay muted loop playsinline>
+                    <source src="https://cdn.pixabay.com/video/2022/02/28/111497-687598868_large.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Follow Section -->
+    <section class="social-follow">
+        <div class="social-container">
+            <h2>Stay Connected</h2>
+            <p>Follow us for the latest updates, security tips, and exclusive offers</p>
+            <div class="social-buttons">
+                <a href="https://www.instagram.com/yourusername" target="_blank" class="social-btn instagram">
+                    <i class="fab fa-instagram"></i><span>Instagram</span>
+                </a>
+                <a href="https://x.com/yourusername" target="_blank" class="social-btn x">
+                    <i class="fab fa-x-twitter"></i><span>X</span>
+                </a>
+                <a href="https://www.facebook.com/yourusername" target="_blank" class="social-btn facebook">
+                    <i class="fab fa-facebook-f"></i><span>Facebook</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+<!-- Modal for question -->
+<div id="questionModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>Website Verification</h3>
+        <p id="questionText"></p>
+        <div class="modal-buttons">
+            <button id="modalYes" class="btn-modal">Yes</button>
+            <button id="modalNo" class="btn-modal">No</button>
+        </div>
+    </div>
+</div>
+
+<!-- Message box (for info/error messages) -->
+<div id="messageBox" class="message-box" style="display: none;">
+    <span id="messageText"></span>
+    <button id="closeMessage" class="close-btn">&times;</button>
+</div>
+</html>
+
+
+
+
+
+
+fdcsmgwreclgkphv
