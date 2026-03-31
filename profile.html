@@ -7,15 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script>
-        // Protect page: if not logged in, redirect to login
-        if (localStorage.getItem('nexusLoggedIn') !== 'true') {
-            window.location.href = 'login.html';
-        }
-    </script>
 </head>
 <body>
-    <!-- Background image as HTML element -->
     <img src="image.jpeg" alt="Background" class="bg-image">
 
     <nav class="navbar">
@@ -33,16 +26,30 @@
         <div class="profile-card">
             <h2>My Profile</h2>
             <div class="profile-info">
-                <p><strong>Name:</strong> <span id="profileName"></span></p>
-                <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+                <p><strong>Name:</strong> {{ user.name }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
             </div>
             <div class="scan-history">
                 <h3>Scan History</h3>
                 <div id="scanHistoryList">
-                    <p class="no-scans">No scans yet. Start a scan from the home page.</p>
+                    {% if scans %}
+                        {% for scan in scans %}
+                            <div class="scan-item">
+                                <strong>{{ scan.plan_type.upper() }}</strong> – {{ scan.target_url }}<br>
+                                <small>Submitted: {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</small><br>
+                                {% if scan.status == 'completed' and scan.report_path %}
+                                    <a href="{{ url_for('view_report', job_id=scan.id) }}" class="btn-link">Download Report</a>
+                                {% else %}
+                                    <span class="status-badge">{{ scan.status }}</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-scans">No scans yet. Start a scan from the home page.</p>
+                    {% endif %}
                 </div>
             </div>
-            <button id="logoutBtn" class="btn-logout">Logout</button>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
         </div>
     </div>
 

