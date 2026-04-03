@@ -35,7 +35,16 @@
                     {% if scans %}
                         {% for scan in scans %}
                             <div class="scan-item">
+                                {% if scan.photo_path %}
+                                    <img src="{{ url_for('uploaded_file', filename=scan.photo_path.split('/')[-1]) }}" 
+                                         alt="User photo" style="width: 50px; height: 50px; border-radius: 50%; float: right;">
+                                {% endif %}
                                 <strong>{{ scan.plan_type.upper() }}</strong> – {{ scan.target_url }}<br>
+                                <strong>Name:</strong> {{ scan.full_name }}<br>
+                                <strong>Role:</strong> {{ scan.role }}<br>
+                                <strong>Company:</strong> {{ scan.company_name }}<br>
+                                <strong>Your Email:</strong> {{ scan.user_email }}<br>
+                                <strong>Business Email:</strong> {{ scan.business_email }}<br>
                                 <small>Submitted: {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</small><br>
                                 {% if scan.status == 'completed' and scan.report_path %}
                                     <a href="{{ url_for('view_report', job_id=scan.id) }}" class="btn-link">Download Report</a>

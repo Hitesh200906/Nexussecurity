@@ -12,11 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.logged_in) {
                 container.innerHTML = `<a href="/profile" id="authButton"><span>Profile</span></a>`;
             } else {
-                container.innerHTML = `<a href="/login" id="authButton"><span>Create account</span></a>`;
+                container.innerHTML = `<a href="/login.html" id="authButton"><span>Create account</span></a>`;
             }
         } catch (err) {
             console.error('Auth status check failed:', err);
-            container.innerHTML = `<a href="/login" id="authButton"><span>Create account</span></a>`;
+            container.innerHTML = `<a href="/login.html" id="authButton"><span>Create account</span></a>`;
         }
     }
 
@@ -60,6 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Disable button to prevent multiple clicks
+            const btn = doLogin;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            btn.disabled = true;
+
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
@@ -70,12 +76,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     showMessage('Logged in successfully!');
-                    window.location.href = 'index.html';
+                    // Small delay to let the message show, then redirect
+                    setTimeout(() => {
+                        window.location.replace('index.html');
+                    }, 500);
                 } else {
                     showMessage(data.message || 'Login failed.', true);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 showMessage('An error occurred. Please try again.', true);
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
             }
         });
     }
@@ -96,6 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Disable button
+            const btn = doSignup;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
+            btn.disabled = true;
+
             try {
                 const response = await fetch('/api/register', {
                     method: 'POST',
@@ -106,12 +126,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     showMessage('Account created! You are now logged in.');
-                    window.location.href = 'index.html';
+                    setTimeout(() => {
+                        window.location.replace('index.html');
+                    }, 500);
                 } else {
                     showMessage(data.message || 'Registration failed.', true);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
                 }
             } catch (error) {
+                console.error('Registration error:', error);
                 showMessage('An error occurred. Please try again.', true);
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
             }
         });
     }
@@ -223,21 +250,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========== ATTACH SUBMIT HANDLERS TO ALL FORMS ==========
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
+        // Toggle photo field based on radio selection
+        const radioYes = form.querySelector('input[value="yes"]');
+        const radioNo = form.querySelector('input[value="no"]');
+        const photoGroup = form.querySelector('#photoGroup');
+
+        if (radioYes && radioNo && photoGroup) {
+            const togglePhoto = () => {
+                photoGroup.style.display = radioNo.checked ? 'block' : 'none';
+                const photoInput = form.querySelector('input[name="photo"]');
+                if (photoInput) photoInput.required = radioNo.checked;
+            };
+            radioYes.addEventListener('change', togglePhoto);
+            radioNo.addEventListener('change', togglePhoto);
+            togglePhoto(); // initial state
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const planInput = form.querySelector('input[name="plan"]');
             const plan = planInput ? planInput.value : selectedPlan;
 
+            // Gather all fields
             const fullName = form.querySelector('input[name="fullName"]')?.value.trim();
             const role = form.querySelector('input[name="role"]')?.value.trim();
             const companyName = form.querySelector('input[name="companyName"]')?.value.trim();
             const userEmail = form.querySelector('input[name="userEmail"]')?.value.trim();
             const websiteUrl = form.querySelector('input[name="websiteUrl"]')?.value.trim();
             const businessEmail = form.querySelector('input[name="businessEmail"]')?.value.trim();
+            const emailOnSite = form.querySelector('input[name="emailOnSite"]:checked')?.value;
 
-            if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail) {
+            // Photo (only if No)
+            let photoFile = null;
+            if (emailOnSite === 'no') {
+                photoFile = form.querySelector('input[name="photo"]')?.files[0];
+            }
+
+            // Basic validation
+            if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail || !emailOnSite) {
                 showMessage('Please fill in all fields.', true);
+                return;
+            }
+            if (emailOnSite === 'no' && !photoFile) {
+                showMessage('Please upload a photo.', true);
                 return;
             }
 
@@ -255,61 +311,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalBtnHTML = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
             submitBtn.disabled = true;
 
             try {
-                // Ownership verification (optional modal)
-                const isMentioned = await askQuestion(`Is the email address "${businessEmail}" mentioned anywhere on your website (${websiteUrl})?`);
-
-                if (isMentioned) {
-                    showMessage(`Checking your website for ${businessEmail}...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    showMessage(`✅ Great! We found ${businessEmail} on your website. Ownership verified.`);
-                } else {
-                    showMessage(`Sending verification email to ${businessEmail}...`);
-                    const sendRes = await fetch('/send_verification', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: businessEmail, website: websiteUrl, plan })
-                    });
-                    const sendData = await sendRes.json();
-                    if (sendData.success) {
-                        showMessage(`📧 Verification email sent to ${businessEmail}. Please click the link in your inbox to confirm.`);
-                    } else {
-                        throw new Error(sendData.message || 'Failed to send email');
-                    }
-                }
-
-                let paymentId = null;
-                const prices = { basic: 0, advanced: 99, protection_plus: 999 };
-                if (prices[plan] > 0) {
-                    const paymentRes = await fetch('/api/payment_mock', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ plan })
-                    });
-                    const paymentData = await paymentRes.json();
-                    if (paymentData.success) paymentId = paymentData.payment_id;
-                }
-
-                const formData = new URLSearchParams();
-                formData.append('url', websiteUrl);
+                const formData = new FormData();
+                formData.append('fullName', fullName);
+                formData.append('role', role);
+                formData.append('companyName', companyName);
+                formData.append('userEmail', userEmail);
+                formData.append('websiteUrl', websiteUrl);
+                formData.append('businessEmail', businessEmail);
                 formData.append('plan', plan);
-                if (paymentId) formData.append('payment_id', paymentId);
+                formData.append('emailOnSite', emailOnSite);
+                if (photoFile) formData.append('photo', photoFile);
 
-                const res = await fetch('/submit_scan', {
+                const response = await fetch('/api/request_scan', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData
                 });
+                const data = await response.json();
 
-                if (res.ok) {
-                    showMessage(`✅ Scan request for ${websiteUrl} (${plan.toUpperCase()}) has been submitted. You will receive the report in your profile within 24 hours.`);
+                if (data.success) {
+                    showMessage(data.message);
                     const parentSection = form.closest('.plan-url-section');
                     if (parentSection) parentSection.style.display = 'none';
                 } else {
-                    showMessage('❌ Submission failed. Please try again.', true);
+                    showMessage(data.message || 'Submission failed.', true);
                 }
             } catch (error) {
                 console.error('Submission error:', error);

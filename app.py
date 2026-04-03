@@ -12,6 +12,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,7 +25,6 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-this')
 # --- Database configuration (SQLite locally, PostgreSQL on Render) ---
 database_url = os.getenv('DATABASE_URL')
 if database_url:
-    # Render uses 'postgres://', SQLAlchemy expects 'postgresql://'
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace('postgres://', 'postgresql://')
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nexus_security.db'
@@ -64,11 +65,10 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
     google_id = db.Column(db.String(100), unique=True)
-    password_hash = db.Column(db.String(128), nullable=True)  # NEW COLUMN
+    password_hash = db.Column(db.String(128), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scans = db.relationship('ScanJob', backref='user', lazy=True)
 
-    # NEW METHODS
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -87,12 +87,34 @@ class ScanJob(db.Model):
     report_data = db.Column(db.Text, nullable=True)
     price = db.Column(db.Integer, nullable=False)
     payment_status = db.Column(db.String(50), default='pending')
+    # New fields for user details
+    full_name = db.Column(db.String(100))
+    role = db.Column(db.String(100))
+    company_name = db.Column(db.String(100))
+    user_email = db.Column(db.String(120))
+    business_email = db.Column(db.String(120))
+    photo_path = db.Column(db.String(500), nullable=True)
 
 class VerificationToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), nullable=False)
     website = db.Column(db.String(500), nullable=False)
     plan = db.Column(db.String(50), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    used = db.Column(db.Boolean, default=False)
+
+class PendingScan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    full_name = db.Column(db.String(100))
+    role = db.Column(db.String(100))
+    company_name = db.Column(db.String(100))
+    user_email = db.Column(db.String(120))
+    website_url = db.Column(db.String(500))
+    business_email = db.Column(db.String(120))
+    plan_type = db.Column(db.String(50))
+    photo_path = db.Column(db.String(500), nullable=True)
     token = db.Column(db.String(64), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used = db.Column(db.Boolean, default=False)
@@ -120,6 +142,10 @@ def serve_js():
 def serve_image():
     return send_file('image.jpeg')
 
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
 # ========== HTML ROUTES ==========
 @app.route('/')
 def index():
@@ -137,7 +163,7 @@ def login_html():
 @login_required
 def profile():
     scans = ScanJob.query.filter_by(user_id=current_user.id).order_by(ScanJob.created_at.desc()).all()
-    return render_template('profile.html', user=current_user, scans=scans)   # CHANGED: pass user and scans
+    return render_template('profile.html', user=current_user, scans=scans)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -172,11 +198,13 @@ def api_login():
     password = data.get('password')
 
     user = User.query.filter_by(email=email).first()
-    if user and user.check_password(password):
+    if not user:
+        return jsonify({'success': False, 'message': 'No account found with this email. Please sign up first.'}), 401
+    if user.check_password(password):
         login_user(user)
         return jsonify({'success': True, 'message': 'Logged in'})
     else:
-        return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
+        return jsonify({'success': False, 'message': 'Incorrect password. Please try again.'}), 401
 
 @app.route('/api/status')
 def api_status():
@@ -188,6 +216,123 @@ def api_status():
         })
     else:
         return jsonify({'logged_in': False})
+
+# ========== SCAN REQUEST WITH EMAIL VERIFICATION ==========
+@app.route('/api/request_scan', methods=['POST'])
+@login_required
+def request_scan():
+    full_name = request.form.get('fullName')
+    role = request.form.get('role')
+    company_name = request.form.get('companyName')
+    user_email = request.form.get('userEmail')
+    website_url = request.form.get('websiteUrl')
+    business_email = request.form.get('businessEmail')
+    plan = request.form.get('plan')
+    email_on_site = request.form.get('emailOnSite')  # 'yes' or 'no'
+    photo = request.files.get('photo') if email_on_site == 'no' else None
+
+    # Validation
+    if not all([full_name, role, company_name, user_email, website_url, business_email, plan, email_on_site]):
+        return jsonify({'success': False, 'message': 'All fields required'}), 400
+
+    if email_on_site == 'no' and not photo:
+        return jsonify({'success': False, 'message': 'Photo required when email not on site'}), 400
+
+    # Save photo if provided
+    photo_path = None
+    if photo:
+        photo_filename = f"{uuid.uuid4().hex}_{photo.filename}"
+        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
+        photo.save(photo_path)
+
+    # Create pending scan record
+    token = secrets.token_urlsafe(32)
+    pending = PendingScan(
+        user_id=current_user.id,
+        full_name=full_name,
+        role=role,
+        company_name=company_name,
+        user_email=user_email,
+        website_url=website_url,
+        business_email=business_email,
+        plan_type=plan,
+        photo_path=photo_path,
+        token=token
+    )
+    db.session.add(pending)
+    db.session.commit()
+
+    # Perform AI check if user said email is on site
+    if email_on_site == 'yes':
+        try:
+            url = website_url if website_url.startswith(('http://', 'https://')) else 'http://' + website_url
+            response = requests.get(url, timeout=10, headers={'User-Agent': 'Nexus-Security-Bot'})
+            if response.status_code != 200:
+                return jsonify({'success': False, 'message': 'Could not reach website'}), 400
+            if business_email.lower() in response.text.lower():
+                # Found – send verification email
+                send_scan_verification_email(pending.token, business_email, website_url, plan)
+                return jsonify({'success': True, 'message': 'Verification email sent'})
+            else:
+                return jsonify({'success': False, 'message': f'Could not find {business_email} on {website_url}.'}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
+    else:
+        # No – send verification email directly
+        send_scan_verification_email(pending.token, business_email, website_url, plan)
+        return jsonify({'success': True, 'message': 'Verification email sent'})
+
+def send_scan_verification_email(token, email, website, plan):
+    verify_url = url_for('verify_scan', token=token, _external=True)
+    msg = Message(
+        subject='Verify your scan request for Nexus Security',
+        recipients=[email]
+    )
+    msg.body = f"""Hello,
+
+You requested a security scan for {website} ({plan} plan).
+Please click the link below to confirm your email and start the scan:
+
+{verify_url}
+
+If you did not request this, please ignore this email.
+
+Nexus Security Team
+"""
+    mail.send(msg)
+
+@app.route('/verify_scan/<token>')
+def verify_scan(token):
+    pending = PendingScan.query.filter_by(token=token, used=False).first()
+    if not pending:
+        return "Invalid or expired verification link.", 400
+
+    prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
+    job = ScanJob(
+        user_id=pending.user_id,
+        target_url=pending.website_url,
+        plan_type=pending.plan_type,
+        price=prices.get(pending.plan_type, 0),
+        payment_status='pending',
+        full_name=pending.full_name,
+        role=pending.role,
+        company_name=pending.company_name,
+        user_email=pending.user_email,
+        business_email=pending.business_email,
+        photo_path=pending.photo_path
+    )
+    db.session.add(job)
+    db.session.commit()
+
+    # Mark pending as used
+    pending.used = True
+    db.session.commit()
+
+    # Start background scan (you'll implement this)
+    # start_scan_background(job.id)
+
+    flash('Scan confirmed! We will start the scan shortly. You will be notified when the report is ready.', 'success')
+    return redirect(url_for('profile'))
 
 # ========== AUTH ROUTES (Google OAuth) ==========
 @app.route('/login')
@@ -218,38 +363,8 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# ========== SCAN ROUTES ==========
-@app.route('/submit_scan', methods=['POST'])
-@login_required
-def submit_scan():
-    target_url = request.form.get('url')
-    plan = request.form.get('plan')
-    payment_id = request.form.get('payment_id')
-
-    if not target_url or not plan:
-        flash('Please provide a URL and select a plan.', 'danger')
-        return redirect(url_for('profile'))
-
-    prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
-    price = prices.get(plan, 0)
-
-    if price > 0 and not payment_id:
-        flash('Payment required for this plan.', 'danger')
-        return redirect(url_for('profile'))
-
-    job = ScanJob(
-        user_id=current_user.id,
-        target_url=target_url,
-        plan_type=plan,
-        price=price,
-        payment_status='paid' if price > 0 else 'free'
-    )
-    db.session.add(job)
-    db.session.commit()
-
-    flash('Your scan has been submitted! You will receive the report in your profile within 24 hours.', 'success')
-    return redirect(url_for('profile'))
-
+# ========== SCAN ROUTES (submit_scan removed, replaced by /api/request_scan) ==========
+# Keep the view_report endpoint
 @app.route('/view_report/<int:job_id>')
 @login_required
 def view_report(job_id):
@@ -262,13 +377,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-@app.route('/api/payment_mock', methods=['POST'])
-def payment_mock():
-    data = request.get_json()
-    plan = data.get('plan')
-    return jsonify({'success': True, 'payment_id': f'pay_{uuid.uuid4().hex[:12]}'})
-
-# ========== EMAIL VERIFICATION ROUTES ==========
+# ========== EMAIL VERIFICATION ROUTES (for old verification tokens, kept for compatibility) ==========
 @app.route('/send_verification', methods=['POST'])
 @login_required
 def send_verification():
@@ -337,6 +446,13 @@ def verify_email(token):
     </body>
     </html>
     """
+
+# ========== API MOCK PAYMENT ==========
+@app.route('/api/payment_mock', methods=['POST'])
+def payment_mock():
+    data = request.get_json()
+    plan = data.get('plan')
+    return jsonify({'success': True, 'payment_id': f'pay_{uuid.uuid4().hex[:12]}'})
 
 if __name__ == '__main__':
     app.run(debug=True)
