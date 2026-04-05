@@ -10,10 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <!-- Background image as HTML element -->
     <img src="image.jpeg" alt="Background" class="bg-image">
 
-    <!-- Navigation (same as index) -->
     <nav class="navbar">
         <div class="logo">
             <h1>NEXUS SECURITY</h1>
@@ -21,15 +19,14 @@
         <div class="nav-links">
             <a href="index.html">Home</a>
             <a href="index.html#plans">Plans</a>
+            <div id="authButtonContainer"></div>   <!-- Added -->
         </div>
     </nav>
 
-    <!-- Animated particle canvas background -->
     <div class="particle-bg">
         <canvas id="particleCanvas"></canvas>
     </div>
 
-    <!-- Auth container -->
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
@@ -59,7 +56,6 @@
                     </label>
                     <a href="#" class="forgot-link">Forgot password?</a>
                 </div>
-                <!-- Animated button – same style as SELECT PLAN -->
                 <button id="doLogin" class="btn-53" data-plan="login">
                     <div class="original">LOG IN</div>
                     <div class="letters">
@@ -91,7 +87,6 @@
                     <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required>
                     <i class="fas fa-check-circle input-icon"></i>
                 </div>
-                <!-- Animated button – same style as SELECT PLAN -->
                 <button id="doSignup" class="btn-53" data-plan="signup">
                     <div class="original">SIGN UP</div>
                     <div class="letters">
@@ -111,10 +106,9 @@
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
 
-    <!-- Scripts -->
     <script src="script.js"></script>
     <script>
-        // Particle background animation
+        // Particle background animation (unchanged)
         const canvas = document.getElementById('particleCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -172,12 +166,10 @@
         initParticles();
         animateParticles();
 
-        // Clean up on page unload
         window.addEventListener('beforeunload', () => {
             if (animationId) cancelAnimationFrame(animationId);
         });
 
-        // Tab indicator logic (adds to existing script.js, but we can also handle here)
         const loginTab = document.getElementById('loginTab');
         const signupTab = document.getElementById('signupTab');
         const loginForm = document.getElementById('loginForm');
@@ -212,7 +204,6 @@
         loginTab.addEventListener('click', () => setActiveTab('login'));
         signupTab.addEventListener('click', () => setActiveTab('signup'));
 
-        // Initial indicator position
         window.addEventListener('load', () => {
             updateIndicator('login');
         });

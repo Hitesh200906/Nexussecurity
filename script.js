@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         signupTab.addEventListener('click', () => setActiveTab('signup'));
     }
 
+    // ----- LOGIN HANDLER (with clear error messages and auto‑switch to signup) -----
     if (doLogin) {
         doLogin.addEventListener('click', async () => {
             const email = document.getElementById('loginEmail').value.trim();
@@ -60,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Disable button to prevent multiple clicks
             const btn = doLogin;
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
@@ -74,26 +74,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
 
-                if (data.success) {
-                    showMessage('Logged in successfully!');
-                    // Small delay to let the message show, then redirect
+                if (response.ok && data.success) {
+                    showMessage('✅ Login successful! Redirecting...');
                     setTimeout(() => {
                         window.location.replace('index.html');
-                    }, 500);
+                    }, 800);
                 } else {
-                    showMessage(data.message || 'Login failed.', true);
+                    // Show the error message from the server
+                    showMessage(data.message || 'Login failed. Please try again.', true);
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
+
+                    // If the error is "no account found", automatically switch to Sign Up tab
+                    if (data.message && data.message.includes('No account found')) {
+                        if (signupTab) signupTab.click();
+                    }
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showMessage('An error occurred. Please try again.', true);
+                showMessage('Network error. Please check your connection.', true);
                 btn.innerHTML = originalHTML;
                 btn.disabled = false;
             }
         });
     }
 
+    // ----- SIGNUP HANDLER (already good, but ensure redirect) -----
     if (doSignup) {
         doSignup.addEventListener('click', async () => {
             const name = document.getElementById('signupName').value.trim();
@@ -110,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Disable button
             const btn = doSignup;
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
@@ -124,11 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
 
-                if (data.success) {
-                    showMessage('Account created! You are now logged in.');
+                if (response.ok && data.success) {
+                    showMessage('✅ Account created! You are now logged in. Redirecting...');
                     setTimeout(() => {
                         window.location.replace('index.html');
-                    }, 500);
+                    }, 800);
                 } else {
                     showMessage(data.message || 'Registration failed.', true);
                     btn.innerHTML = originalHTML;
@@ -179,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 const plan = btn.getAttribute('data-plan');
 
-                // Check if user is logged in before showing the form
                 try {
                     const statusRes = await fetch('/api/status');
                     const status = await statusRes.json();
@@ -250,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========== ATTACH SUBMIT HANDLERS TO ALL FORMS ==========
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
-        // Toggle photo field based on radio selection
         const radioYes = form.querySelector('input[value="yes"]');
         const radioNo = form.querySelector('input[value="no"]');
         const photoGroup = form.querySelector('#photoGroup');
@@ -263,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             radioYes.addEventListener('change', togglePhoto);
             radioNo.addEventListener('change', togglePhoto);
-            togglePhoto(); // initial state
+            togglePhoto();
         }
 
         form.addEventListener('submit', async (e) => {
@@ -272,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const planInput = form.querySelector('input[name="plan"]');
             const plan = planInput ? planInput.value : selectedPlan;
 
-            // Gather all fields
             const fullName = form.querySelector('input[name="fullName"]')?.value.trim();
             const role = form.querySelector('input[name="role"]')?.value.trim();
             const companyName = form.querySelector('input[name="companyName"]')?.value.trim();
@@ -281,13 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const businessEmail = form.querySelector('input[name="businessEmail"]')?.value.trim();
             const emailOnSite = form.querySelector('input[name="emailOnSite"]:checked')?.value;
 
-            // Photo (only if No)
             let photoFile = null;
             if (emailOnSite === 'no') {
                 photoFile = form.querySelector('input[name="photo"]')?.files[0];
             }
 
-            // Basic validation
             if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail || !emailOnSite) {
                 showMessage('Please fill in all fields.', true);
                 return;
