@@ -19,7 +19,7 @@
         <div class="nav-links">
             <a href="index.html">Home</a>
             <a href="index.html#plans">Plans</a>
-            <div id="authButtonContainer"></div>   <!-- Added -->
+            <div id="authButtonContainer"></div>
         </div>
     </nav>
 
@@ -211,6 +211,134 @@
             const activeTab = loginTab.classList.contains('active') ? 'login' : 'signup';
             updateIndicator(activeTab);
         });
+    </script>
+
+    <!-- NEW SCRIPT: Force redirect to home page after login/signup -->
+    <script>
+        (function() {
+            // Helper to show a simple message (you can replace with your own modal)
+            function showMessage(msg, isError = false) {
+                // Use the existing message box if available, else alert
+                const box = document.getElementById('messageBox');
+                if (box) {
+                    const text = document.getElementById('messageText');
+                    if (text) text.textContent = msg;
+                    box.style.display = 'flex';
+                    box.style.borderLeftColor = isError ? '#ef4444' : '#2f9b9b';
+                    setTimeout(() => { box.style.display = 'none'; }, 5000);
+                } else {
+                    alert(msg);
+                }
+            }
+
+            // Override login button
+            const loginBtn = document.getElementById('doLogin');
+            if (loginBtn) {
+                // Remove any existing listeners to avoid double submission
+                const newLoginBtn = loginBtn.cloneNode(true);
+                loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
+                
+                newLoginBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('loginEmail').value.trim();
+                    const password = document.getElementById('loginPassword').value;
+                    
+                    if (!email || !password) {
+                        showMessage('Please fill in both fields.', true);
+                        return;
+                    }
+                    
+                    const originalHTML = newLoginBtn.innerHTML;
+                    newLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                    newLoginBtn.disabled = true;
+                    
+                    try {
+                        const response = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            showMessage('✅ Login successful! Redirecting...');
+                            setTimeout(() => {
+                                window.location.href = '/index.html?t=' + Date.now();
+                            }, 1000);
+                        } else {
+                            showMessage(data.message || 'Login failed.', true);
+                            newLoginBtn.innerHTML = originalHTML;
+                            newLoginBtn.disabled = false;
+                            // Optionally switch to signup tab if no account
+                            if (data.message && data.message.includes('No account found')) {
+                                const signupTabBtn = document.getElementById('signupTab');
+                                if (signupTabBtn) signupTabBtn.click();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        showMessage('Network error. Please try again.', true);
+                        newLoginBtn.innerHTML = originalHTML;
+                        newLoginBtn.disabled = false;
+                    }
+                });
+            }
+            
+            // Override signup button
+            const signupBtn = document.getElementById('doSignup');
+            if (signupBtn) {
+                const newSignupBtn = signupBtn.cloneNode(true);
+                signupBtn.parentNode.replaceChild(newSignupBtn, signupBtn);
+                
+                newSignupBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('signupName').value.trim();
+                    const email = document.getElementById('signupEmail').value.trim();
+                    const password = document.getElementById('signupPassword').value;
+                    const confirm = document.getElementById('signupConfirmPassword').value;
+                    
+                    if (!name || !email || !password) {
+                        showMessage('Please fill in all fields.', true);
+                        return;
+                    }
+                    if (password !== confirm) {
+                        showMessage('Passwords do not match.', true);
+                        return;
+                    }
+                    
+                    const originalHTML = newSignupBtn.innerHTML;
+                    newSignupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
+                    newSignupBtn.disabled = true;
+                    
+                    try {
+                        const response = await fetch('/api/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name, email, password })
+                        });
+                        const data = await response.json();
+                        
+                        if (response.ok && data.success) {
+                            showMessage('✅ Account created! Redirecting...');
+                            setTimeout(() => {
+                                window.location.href = '/index.html?t=' + Date.now();
+                            }, 1000);
+                        } else {
+                            showMessage(data.message || 'Registration failed.', true);
+                            newSignupBtn.innerHTML = originalHTML;
+                            newSignupBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        showMessage('An error occurred. Please try again.', true);
+                        newSignupBtn.innerHTML = originalHTML;
+                        newSignupBtn.disabled = false;
+                    }
+                });
+            }
+            
+            // Keep Google login as is (redirects to /login which will eventually go to home page)
+        })();
     </script>
 </body>
 </html>
