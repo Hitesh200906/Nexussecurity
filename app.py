@@ -69,7 +69,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
     google_id = db.Column(db.String(100), unique=True)
-    password_hash = db.Column(db.String(128), nullable=True)
+    password_hash = db.Column(db.String(256), nullable=True)  # FIXED: increased from 128 to 256
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scans = db.relationship('ScanJob', backref='user', lazy=True)
 

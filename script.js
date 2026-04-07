@@ -1,5 +1,11 @@
 // script.js – shared across all pages
 document.addEventListener('DOMContentLoaded', () => {
+    // Ensure fetch exists (for very old browsers – but you can ignore)
+    if (typeof fetch === 'undefined') {
+        console.error('fetch() is not supported. Please update your browser.');
+        return;
+    }
+
     // Helper: update the auth button in navbar based on server session
     async function updateAuthButton() {
         const container = document.getElementById('authButtonContainer');
@@ -50,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         signupTab.addEventListener('click', () => setActiveTab('signup'));
     }
 
-    // ----- LOGIN HANDLER (with clear error messages and auto‑switch to signup) -----
+    // ----- LOGIN HANDLER (with clear error messages) -----
     if (doLogin) {
         doLogin.addEventListener('click', async () => {
             const email = document.getElementById('loginEmail').value.trim();
@@ -80,12 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.location.replace('index.html');
                     }, 800);
                 } else {
-                    // Show the error message from the server
                     showMessage(data.message || 'Login failed. Please try again.', true);
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
 
-                    // If the error is "no account found", automatically switch to Sign Up tab
                     if (data.message && data.message.includes('No account found')) {
                         if (signupTab) signupTab.click();
                     }
@@ -99,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ----- SIGNUP HANDLER (already good, but ensure redirect) -----
+    // ----- SIGNUP HANDLER (EXPLICIT fetch, no missing keyword) -----
     if (doSignup) {
         doSignup.addEventListener('click', async () => {
             const name = document.getElementById('signupName').value.trim();
@@ -122,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
 
             try {
+                // ✅ CORRECT: fetch is explicitly written
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
