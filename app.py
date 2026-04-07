@@ -401,7 +401,8 @@ def verify_scan(token):
     db.session.commit()
 
     flash('Scan confirmed! We will start the scan shortly. You will be notified when the report is ready.', 'success')
-    return redirect(url_for('profile'))
+    # Redirect to home page instead of profile
+    return redirect(url_for('index'))
 
 # ========== GOOGLE OAUTH ROUTES (only if configured) ==========
 @app.route('/login')
@@ -430,7 +431,8 @@ def authorize():
         db.session.add(user)
         db.session.commit()
     login_user(user)
-    return redirect(url_for('profile'))
+    # Redirect to home page instead of profile
+    return redirect(url_for('index'))
 
 @app.route('/logout')
 @login_required

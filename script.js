@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         signupTab.addEventListener('click', () => setActiveTab('signup'));
     }
 
-    // ----- LOGIN HANDLER (with clear error messages) -----
+    // ----- LOGIN HANDLER (redirects to index.html with cache-busting) -----
     if (doLogin) {
         doLogin.addEventListener('click', async () => {
             const email = document.getElementById('loginEmail').value.trim();
@@ -83,8 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok && data.success) {
                     showMessage('✅ Login successful! Redirecting...');
                     setTimeout(() => {
-                        window.location.replace('index.html');
-                    }, 800);
+                        // Redirect to home page with cache-busting to force fresh load
+                        window.location.href = '/index.html?t=' + Date.now();
+                    }, 1000); // Increased delay to ensure session cookie is set
                 } else {
                     showMessage(data.message || 'Login failed. Please try again.', true);
                     btn.innerHTML = originalHTML;
@@ -103,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ----- SIGNUP HANDLER (EXPLICIT fetch, no missing keyword) -----
+    // ----- SIGNUP HANDLER (redirects to index.html with cache-busting) -----
     if (doSignup) {
         doSignup.addEventListener('click', async () => {
             const name = document.getElementById('signupName').value.trim();
@@ -126,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
 
             try {
-                // ✅ CORRECT: fetch is explicitly written
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -137,8 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok && data.success) {
                     showMessage('✅ Account created! You are now logged in. Redirecting...');
                     setTimeout(() => {
-                        window.location.replace('index.html');
-                    }, 800);
+                        // Redirect to home page with cache-busting
+                        window.location.href = '/index.html?t=' + Date.now();
+                    }, 1000);
                 } else {
                     showMessage(data.message || 'Registration failed.', true);
                     btn.innerHTML = originalHTML;
