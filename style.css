@@ -1645,3 +1645,101 @@ body::after {
     cursor: pointer;
     margin-left: 1rem;
 }
+
+/* ===== Business Email Question Section ===== */
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+}
+
+/* Radio group container */
+.radio-group {
+    display: flex;
+    gap: 2rem;
+    margin-top: 0.25rem;
+}
+
+/* Custom radio buttons */
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: normal;
+    color: #ccc;
+    transition: color 0.2s ease;
+}
+
+.radio-group input[type="radio"] {
+    appearance: none;
+    width: 1.2rem;
+    height: 1.2rem;
+    border: 2px solid #2f9b9b;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    cursor: pointer;
+}
+
+.radio-group input[type="radio"]:checked {
+    background: #2f9b9b;
+    box-shadow: inset 0 0 0 3px #0a0a0f;
+}
+
+.radio-group input[type="radio"]:hover {
+    border-color: #4fc3c3;
+    transform: scale(1.05);
+}
+
+/* Photo group container (initially hidden) */
+#photoGroup {
+    margin-top: 1.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #2f9b9b40;
+    transition: all 0.3s ease;
+}
+
+/* File input styling */
+.form-group input[type="file"] {
+    background: #1a1a2a;
+    border: 1px solid #2f9b9b;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    color: #fff;
+    cursor: pointer;
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.form-group input[type="file"]::file-selector-button {
+    background: #2f9b9b;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem 1rem;
+    margin-right: 1rem;
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+    background: #3fbfbf;
+}
+
+/* Small helper text */
+.form-group small {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* Optional: adjust the photo icon position */
+.form-group .input-icon {
+    top: 2.2rem; /* Align with file input */
+}

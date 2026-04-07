@@ -7,16 +7,10 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script>
-        // Check login status from localStorage (simulate backend)
-        window.isLoggedIn = localStorage.getItem('nexusLoggedIn') === 'true';
-    </script>
 </head>
 <body>
-    <!-- Background image as HTML element -->
     <img src="image.jpeg" alt="Background" class="bg-image">
 
-    <!-- Navbar (simple, no ghost) -->
     <nav class="navbar">
         <div class="logo">
             <h1>NEXUS SECURITY</h1>
@@ -28,7 +22,6 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero" id="home">
         <div class="hero-content">
             <h1>AI‑Powered Scan</h1>
@@ -50,7 +43,6 @@
             </div>
         </div>
 
-        <!-- Scan Type Cards -->
         <div class="scan-types">
             <div class="type-card">
                 <i class="fas fa-search"></i>
@@ -72,7 +64,6 @@
             </div>
         </div>
 
-        <!-- Stats -->
         <div class="info-stats">
             <div class="info-item">
                 <i class="fas fa-chart-simple"></i>
@@ -92,7 +83,6 @@
         </div>
     </section>
 
-    <!-- Plans Section -->
     <section class="plans-section" id="plans">
         <h2>Choose Your Plan</h2>
         <div class="plans-container">
@@ -162,7 +152,6 @@
         </div>
     </section>
 
-    <!-- URL Sections: One for each plan -->
     <!-- Basic Scan Section -->
     <div id="urlSectionBasic" class="url-section plan-url-section" style="display: none;" data-plan="basic">
         <div class="url-container">
@@ -194,10 +183,10 @@
                     <input type="email" name="businessEmail" placeholder="Business Email (e.g., admin@example.com)" required>
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
-                <!-- NEW FIELDS -->
+                <!-- Business email question -->
                 <div class="form-group">
                     <label>Is the business email mentioned on your website?</label>
-                    <div style="display: flex; gap: 1rem;">
+                    <div class="radio-group">
                         <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
                         <label><input type="radio" name="emailOnSite" value="no" required> No</label>
                     </div>
@@ -248,7 +237,7 @@
                 </div>
                 <div class="form-group">
                     <label>Is the business email mentioned on your website?</label>
-                    <div style="display: flex; gap: 1rem;">
+                    <div class="radio-group">
                         <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
                         <label><input type="radio" name="emailOnSite" value="no" required> No</label>
                     </div>
@@ -299,7 +288,7 @@
                 </div>
                 <div class="form-group">
                     <label>Is the business email mentioned on your website?</label>
-                    <div style="display: flex; gap: 1rem;">
+                    <div class="radio-group">
                         <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
                         <label><input type="radio" name="emailOnSite" value="no" required> No</label>
                     </div>
@@ -317,7 +306,6 @@
         </div>
     </div>
 
-    <!-- How Our AI Works Section -->
     <section class="how-it-works">
         <div class="how-container">
             <div class="how-text">
@@ -340,7 +328,6 @@
         </div>
     </section>
 
-    <!-- Social Follow Section -->
     <section class="social-follow">
         <div class="social-container">
             <h2>Stay Connected</h2>
@@ -363,23 +350,41 @@
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
 
-    <script src="script.js"></script>
-</body>
-<!-- Modal for question -->
-<div id="questionModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h3>Website Verification</h3>
-        <p id="questionText"></p>
-        <div class="modal-buttons">
-            <button id="modalYes" class="btn-modal">Yes</button>
-            <button id="modalNo" class="btn-modal">No</button>
+    <!-- Modal -->
+    <div id="questionModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Website Verification</h3>
+            <p id="questionText"></p>
+            <div class="modal-buttons">
+                <button id="modalYes" class="btn-modal">Yes</button>
+                <button id="modalNo" class="btn-modal">No</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Message box (for info/error messages) -->
-<div id="messageBox" class="message-box" style="display: none;">
-    <span id="messageText"></span>
-    <button id="closeMessage" class="close-btn">&times;</button>
-</div>
+    <!-- Message Box -->
+    <div id="messageBox" class="message-box" style="display: none;">
+        <span id="messageText"></span>
+        <button id="closeMessage" class="close-btn">&times;</button>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Toggle photo group visibility for all forms
+        document.querySelectorAll('.scan-form').forEach(form => {
+            const radios = form.querySelectorAll('input[name="emailOnSite"]');
+            const photoGroup = form.querySelector('#photoGroup');
+            if (radios.length && photoGroup) {
+                const toggle = () => {
+                    const selected = form.querySelector('input[name="emailOnSite"]:checked');
+                    photoGroup.style.display = (selected && selected.value === 'no') ? 'block' : 'none';
+                    const fileInput = photoGroup.querySelector('input[type="file"]');
+                    if (fileInput) fileInput.required = (selected && selected.value === 'no');
+                };
+                radios.forEach(radio => radio.addEventListener('change', toggle));
+                toggle();
+            }
+        });
+    </script>
+</body>
 </html>
