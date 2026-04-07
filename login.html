@@ -8,6 +8,68 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Additional styles for the message box (in case style.css doesn't have them) */
+        .message-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            max-width: 400px;
+            background: #0a0a0f;
+            border-left: 4px solid #2f9b9b;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+            font-family: 'Inter', sans-serif;
+        }
+        .message-toast.error {
+            border-left-color: #ef4444;
+        }
+        .message-toast.success {
+            border-left-color: #2f9b9b;
+        }
+        .message-toast i {
+            font-size: 1.5rem;
+        }
+        .message-toast .message-text {
+            flex: 1;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        .message-toast .close-message {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+        .message-toast .close-message:hover {
+            color: #fff;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
 </head>
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
@@ -105,6 +167,9 @@
     <footer>
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
+
+    <!-- Message Toast Container (will be created dynamically) -->
+    <div id="messageToastContainer"></div>
 
     <script src="script.js"></script>
     <script>
@@ -211,30 +276,44 @@
             const activeTab = loginTab.classList.contains('active') ? 'login' : 'signup';
             updateIndicator(activeTab);
         });
-    </script>
 
-    <!-- NEW SCRIPT: Force redirect to home page after login/signup -->
-    <script>
-        (function() {
-            // Helper to show a simple message (you can replace with your own modal)
-            function showMessage(msg, isError = false) {
-                // Use the existing message box if available, else alert
-                const box = document.getElementById('messageBox');
-                if (box) {
-                    const text = document.getElementById('messageText');
-                    if (text) text.textContent = msg;
-                    box.style.display = 'flex';
-                    box.style.borderLeftColor = isError ? '#ef4444' : '#2f9b9b';
-                    setTimeout(() => { box.style.display = 'none'; }, 5000);
-                } else {
-                    alert(msg);
+        // ----- Styled Message Box Function -----
+        function showStyledMessage(message, isError = false) {
+            const container = document.getElementById('messageToastContainer');
+            if (!container) return;
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `message-toast ${isError ? 'error' : 'success'}`;
+            const icon = isError ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
+            toast.innerHTML = `
+                ${icon}
+                <div class="message-text">${message}</div>
+                <button class="close-message"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(toast);
+
+            // Close button functionality
+            const closeBtn = toast.querySelector('.close-message');
+            closeBtn.addEventListener('click', () => {
+                toast.style.animation = 'slideOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            });
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.style.animation = 'slideOut 0.3s ease-out forwards';
+                    setTimeout(() => toast.remove(), 300);
                 }
-            }
+            }, 5000);
+        }
 
-            // Override login button
+        // ----- Override login and signup with styled messages and redirect to home -----
+        (function() {
+            // Login button
             const loginBtn = document.getElementById('doLogin');
             if (loginBtn) {
-                // Remove any existing listeners to avoid double submission
                 const newLoginBtn = loginBtn.cloneNode(true);
                 loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
                 
@@ -244,7 +323,7 @@
                     const password = document.getElementById('loginPassword').value;
                     
                     if (!email || !password) {
-                        showMessage('Please fill in both fields.', true);
+                        showStyledMessage('Please fill in both fields.', true);
                         return;
                     }
                     
@@ -261,15 +340,14 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
-                            showMessage('✅ Login successful! Redirecting...');
+                            showStyledMessage('✅ Login successful! Redirecting...');
                             setTimeout(() => {
                                 window.location.href = '/index.html?t=' + Date.now();
                             }, 1000);
                         } else {
-                            showMessage(data.message || 'Login failed.', true);
+                            showStyledMessage(data.message || 'Login failed.', true);
                             newLoginBtn.innerHTML = originalHTML;
                             newLoginBtn.disabled = false;
-                            // Optionally switch to signup tab if no account
                             if (data.message && data.message.includes('No account found')) {
                                 const signupTabBtn = document.getElementById('signupTab');
                                 if (signupTabBtn) signupTabBtn.click();
@@ -277,14 +355,14 @@
                         }
                     } catch (error) {
                         console.error('Login error:', error);
-                        showMessage('Network error. Please try again.', true);
+                        showStyledMessage('Network error. Please try again.', true);
                         newLoginBtn.innerHTML = originalHTML;
                         newLoginBtn.disabled = false;
                     }
                 });
             }
             
-            // Override signup button
+            // Signup button
             const signupBtn = document.getElementById('doSignup');
             if (signupBtn) {
                 const newSignupBtn = signupBtn.cloneNode(true);
@@ -298,11 +376,11 @@
                     const confirm = document.getElementById('signupConfirmPassword').value;
                     
                     if (!name || !email || !password) {
-                        showMessage('Please fill in all fields.', true);
+                        showStyledMessage('Please fill in all fields.', true);
                         return;
                     }
                     if (password !== confirm) {
-                        showMessage('Passwords do not match.', true);
+                        showStyledMessage('Passwords do not match.', true);
                         return;
                     }
                     
@@ -319,25 +397,34 @@
                         const data = await response.json();
                         
                         if (response.ok && data.success) {
-                            showMessage('✅ Account created! Redirecting...');
+                            showStyledMessage('✅ Account created! Redirecting...');
                             setTimeout(() => {
                                 window.location.href = '/index.html?t=' + Date.now();
                             }, 1000);
                         } else {
-                            showMessage(data.message || 'Registration failed.', true);
+                            showStyledMessage(data.message || 'Registration failed.', true);
                             newSignupBtn.innerHTML = originalHTML;
                             newSignupBtn.disabled = false;
                         }
                     } catch (error) {
                         console.error('Registration error:', error);
-                        showMessage('An error occurred. Please try again.', true);
+                        showStyledMessage('An error occurred. Please try again.', true);
                         newSignupBtn.innerHTML = originalHTML;
                         newSignupBtn.disabled = false;
                     }
                 });
             }
             
-            // Keep Google login as is (redirects to /login which will eventually go to home page)
+            // Google login buttons stay as they are (redirect to /login)
+            const googleBtns = [document.getElementById('googleLogin'), document.getElementById('googleSignup')];
+            googleBtns.forEach(btn => {
+                if (btn && !btn.hasAttribute('data-listener')) {
+                    btn.setAttribute('data-listener', 'true');
+                    btn.addEventListener('click', () => {
+                        window.location.href = '/login';
+                    });
+                }
+            });
         })();
     </script>
 </body>
