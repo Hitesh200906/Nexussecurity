@@ -1743,3 +1743,64 @@ body::after {
 .form-group .input-icon {
     top: 2.2rem; /* Align with file input */
 }
+
+
+/* manual verification panel */
+
+/* Verification code panel */
+.verification-code-box {
+    background: rgba(15,15,23,0.95);
+    border: 1px solid var(--accent);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+.code-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1rem 0;
+    font-size: 2rem;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    background: #000;
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--accent);
+}
+.code-display span {
+    letter-spacing: 6px;
+    color: var(--accent);
+}
+.btn-copy {
+    background: var(--accent);
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: 0.2s;
+}
+.btn-copy:hover {
+    background: var(--accent-light);
+    transform: scale(1.02);
+}
+.instruction {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 1rem 0;
+    line-height: 1.5;
+    text-align: left;
+}
+.verifyStatus {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

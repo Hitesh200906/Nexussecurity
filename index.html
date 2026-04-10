@@ -156,7 +156,7 @@
     <div id="urlSectionBasic" class="url-section plan-url-section" style="display: none;" data-plan="basic">
         <div class="url-container">
             <h3>Basic Scan Details</h3>
-            <p>We'll verify ownership and send a confirmation email before starting the scan.</p>
+            <p>We'll verify ownership and start the scan after confirmation.</p>
             <form class="scan-form">
                 <input type="hidden" name="plan" value="basic">
                 <div class="form-group">
@@ -183,28 +183,45 @@
                     <input type="email" name="businessEmail" placeholder="Business Email (e.g., admin@example.com)" required>
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
-                <!-- Business email question -->
+
+                <!-- TWO VERIFICATION OPTIONS -->
                 <div class="form-group">
-                    <label>Is the business email mentioned on your website?</label>
+                    <label>How do you want to verify ownership?</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
-                        <label><input type="radio" name="emailOnSite" value="no" required> No</label>
+                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                    </div>
+                    <div class="radio-group" style="margin-top: 0.5rem;">
+                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
                     </div>
                 </div>
-                <div id="photoGroup" style="display: none;">
-                    <div class="form-group">
-                        <input type="file" name="photo" accept="image/*">
-                        <i class="fas fa-camera input-icon"></i>
-                        <small>Upload a photo (required if email not on site)</small>
+
+                <!-- Manual verification panel (hidden initially) -->
+                <div id="manualVerificationPanel" style="display: none;">
+                    <div class="verification-code-box">
+                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                        <div class="code-display">
+                            <span id="verificationCode">------</span>
+                            <button type="button" class="copyCodeBtn" class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <p class="instruction">
+                            📌 <strong>Instructions:</strong><br>
+                            1. Copy the code above.<br>
+                            2. Paste it anywhere on your website (e.g., inside a hidden `<div>`, a meta tag, or the footer).<br>
+                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
+                            4. Once verified, your scan will start immediately.
+                        </p>
+                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
+                        <div class="verifyStatus" style="margin-top: 1rem;"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn-53">REQUEST SCAN</button>
+
+                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
             </form>
-            <p class="url-note">* We'll send a confirmation email to the business email. The scan will start after you confirm.</p>
+            <p class="url-note">* We'll send a confirmation email to the business email if you choose that option.</p>
         </div>
     </div>
 
-    <!-- Advanced Scan Section -->
+    <!-- Advanced Scan Section (same structure, plan=advanced) -->
     <div id="urlSectionAdvanced" class="url-section plan-url-section" style="display: none;" data-plan="advanced">
         <div class="url-container">
             <h3>Advanced Scan Details</h3>
@@ -235,27 +252,43 @@
                     <input type="email" name="businessEmail" placeholder="Business Email" required>
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
+
                 <div class="form-group">
-                    <label>Is the business email mentioned on your website?</label>
+                    <label>How do you want to verify ownership?</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
-                        <label><input type="radio" name="emailOnSite" value="no" required> No</label>
+                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                    </div>
+                    <div class="radio-group" style="margin-top: 0.5rem;">
+                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
                     </div>
                 </div>
-                <div id="photoGroup" style="display: none;">
-                    <div class="form-group">
-                        <input type="file" name="photo" accept="image/*">
-                        <i class="fas fa-camera input-icon"></i>
-                        <small>Upload a photo (required if email not on site)</small>
+
+                <div class="manualVerificationPanel" style="display: none;">
+                    <div class="verification-code-box">
+                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                        <div class="code-display">
+                            <span class="verificationCode">------</span>
+                            <button type="button" class="copyCodeBtn btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <p class="instruction">
+                            📌 <strong>Instructions:</strong><br>
+                            1. Copy the code above.<br>
+                            2. Paste it anywhere on your website.<br>
+                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
+                            4. Once verified, your scan will start immediately.
+                        </p>
+                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
+                        <div class="verifyStatus"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn-53">REQUEST SCAN</button>
+
+                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
             </form>
             <p class="url-note">* We'll verify your business email and start the scan within minutes.</p>
         </div>
     </div>
 
-    <!-- Protection+ Scan Section -->
+    <!-- Protection+ Scan Section (same structure, plan=protection_plus) -->
     <div id="urlSectionProtection" class="url-section plan-url-section" style="display: none;" data-plan="protection_plus">
         <div class="url-container">
             <h3>Protection+ Scan Details</h3>
@@ -286,21 +319,37 @@
                     <input type="email" name="businessEmail" placeholder="Business Email" required>
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
+
                 <div class="form-group">
-                    <label>Is the business email mentioned on your website?</label>
+                    <label>How do you want to verify ownership?</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> Yes</label>
-                        <label><input type="radio" name="emailOnSite" value="no" required> No</label>
+                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                    </div>
+                    <div class="radio-group" style="margin-top: 0.5rem;">
+                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
                     </div>
                 </div>
-                <div id="photoGroup" style="display: none;">
-                    <div class="form-group">
-                        <input type="file" name="photo" accept="image/*">
-                        <i class="fas fa-camera input-icon"></i>
-                        <small>Upload a photo (required if email not on site)</small>
+
+                <div class="manualVerificationPanel" style="display: none;">
+                    <div class="verification-code-box">
+                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                        <div class="code-display">
+                            <span class="verificationCode">------</span>
+                            <button type="button" class="copyCodeBtn btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <p class="instruction">
+                            📌 <strong>Instructions:</strong><br>
+                            1. Copy the code above.<br>
+                            2. Paste it anywhere on your website.<br>
+                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
+                            4. Once verified, your scan will start immediately.
+                        </p>
+                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
+                        <div class="verifyStatus"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn-53">REQUEST SCAN</button>
+
+                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
             </form>
             <p class="url-note">* Strict ownership verification and confirmation email required.</p>
         </div>
@@ -369,22 +418,5 @@
     </div>
 
     <script src="script.js"></script>
-    <script>
-        // Toggle photo group visibility for all forms
-        document.querySelectorAll('.scan-form').forEach(form => {
-            const radios = form.querySelectorAll('input[name="emailOnSite"]');
-            const photoGroup = form.querySelector('#photoGroup');
-            if (radios.length && photoGroup) {
-                const toggle = () => {
-                    const selected = form.querySelector('input[name="emailOnSite"]:checked');
-                    photoGroup.style.display = (selected && selected.value === 'no') ? 'block' : 'none';
-                    const fileInput = photoGroup.querySelector('input[type="file"]');
-                    if (fileInput) fileInput.required = (selected && selected.value === 'no');
-                };
-                radios.forEach(radio => radio.addEventListener('change', toggle));
-                toggle();
-            }
-        });
-    </script>
 </body>
 </html>
