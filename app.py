@@ -11,7 +11,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from authlib.integrations.flask_client import OAuth
-from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 from bs4 import BeautifulSoup
@@ -33,23 +32,10 @@ app.config['UPLOAD_FOLDER'] = 'reports'
 app.config['SCAN_TIMEOUT'] = 60
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Email config
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME'))
+# Brevo API config (no SMTP)
+BREVO_API_KEY = os.getenv('BREVO_API_KEY')
+BREVO_SENDER_EMAIL = os.getenv('MAIL_DEFAULT_SENDER', 'nexussecurity777@gmail.com')
 
-print("📧 Email config loaded:")
-print(f"  MAIL_SERVER: {app.config['MAIL_SERVER']}")
-print(f"  MAIL_PORT: {app.config['MAIL_PORT']}")
-print(f"  MAIL_USE_TLS: {app.config['MAIL_USE_TLS']}")
-print(f"  MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-print(f"  MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'NOT SET'}")
-print(f"  MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
-
-mail = Mail(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -198,13 +184,13 @@ th {{ background: #1a1a2a; }}
 <p><strong>Plan:</strong> {job.plan_type.upper()}</p>
 <p><strong>Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
 <h2>Vulnerabilities Found ({len(vulns)})</h2>
-<tr>
-<th>Name</th><th>Severity</th><th>Description</th>
+<table>
+<tr><th>Name</th><th>Severity</th><th>Description</th></tr>
 """
     for v in vulns:
         severity_class = v['severity'].lower()
         html += f"<tr><td>{v['name']}</td><td class='{severity_class}'>{v['severity']}</td><td>{v['description']}</td></tr>"
-    html += """</table>
+    html += """</td>
 <p>Remediation advice: Contact your developer to fix the issues listed above.</p>
 <p>Nexus Security Team</p>
 </body></html>"""
@@ -216,31 +202,27 @@ th {{ background: #1a1a2a; }}
     job.status = 'completed'
     job.completed_at = datetime.utcnow()
     db.session.commit()
-    # Remove job from session to free memory
     db.session.expunge(job)
 
-# ✅ OPTIMISED background worker – processes one job at a time, clears session
+# Optimised background worker
 def background_worker():
     with app.app_context():
         while True:
             try:
-                # Get the oldest pending job (FIFO)
                 job = ScanJob.query.filter_by(status='pending').order_by(ScanJob.created_at).first()
                 if job:
                     generate_report_for_job(job.id)
-                    # Expunge all objects from session to free memory
                     db.session.expunge_all()
                 else:
                     time.sleep(5)
                 db.session.commit()
-                db.session.remove()  # close session
+                db.session.remove()
             except Exception as e:
                 print(f"Background worker error: {e}")
                 db.session.rollback()
                 db.session.remove()
             time.sleep(10)
 
-# Start background thread only once
 if not hasattr(app, 'scanner_started'):
     thread = threading.Thread(target=background_worker, daemon=True)
     thread.start()
@@ -323,6 +305,27 @@ def api_status():
         return jsonify({'logged_in': True, 'name': current_user.name, 'email': current_user.email})
     return jsonify({'logged_in': False})
 
+# ---------- Brevo API email sender (replaces Flask-Mail) ----------
+def send_brevo_email(to_email, subject, content):
+    if not BREVO_API_KEY:
+        raise Exception("BREVO_API_KEY not set")
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+    }
+    payload = {
+        "sender": {"name": "Nexus Security", "email": BREVO_SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": content,
+    }
+    response = requests.post(url, json=payload, headers=headers, timeout=15)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error: {response.status_code} - {response.text}")
+    return True
+
 # ---------- SCAN REQUEST: TWO PATHS ----------
 @app.route('/api/request_scan', methods=['POST'])
 @login_required
@@ -339,7 +342,6 @@ def request_scan():
     if not all([full_name, role, company_name, user_email, website_url, business_email, plan, email_on_site]):
         return jsonify({'success': False, 'message': 'All fields required'}), 400
 
-    # ---- PATH 1: Email is on website -> verify and send email ----
     if email_on_site == 'yes':
         try:
             url = website_url if website_url.startswith(('http://', 'https://')) else 'http://' + website_url
@@ -362,7 +364,16 @@ def request_scan():
                 db.session.add(pending)
                 db.session.commit()
                 try:
-                    send_scan_verification_email(token, business_email, website_url, plan)
+                    verify_url = url_for('verify_scan', token=token, _external=True)
+                    email_content = f"""
+                    <p>Hello,</p>
+                    <p>You requested a security scan for {website_url} ({plan} plan).</p>
+                    <p>Please click the link below to confirm your email and start the scan:</p>
+                    <p><a href="{verify_url}">Confirm Scan</a></p>
+                    <p>If you did not request this, please ignore this email.</p>
+                    <p>Nexus Security Team</p>
+                    """
+                    send_brevo_email(business_email, 'Verify your scan request for Nexus Security', email_content)
                     return jsonify({'success': True, 'message': f'Verification email sent to {business_email}'})
                 except Exception as mail_err:
                     db.session.rollback()
@@ -376,8 +387,6 @@ def request_scan():
         except Exception as e:
             print(f"Unexpected error: {e}")
             return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
-
-    # ---- PATH 2: Email NOT on website -> generate manual verification code ----
     else:
         code = generate_verification_code()
         while WebsiteVerificationCode.query.filter_by(code=code).first():
@@ -402,26 +411,6 @@ def request_scan():
         db.session.add(verification_entry)
         db.session.commit()
         return jsonify({'success': True, 'code': code, 'token': verification_entry.id, 'message': 'Verification code generated'})
-
-# ---------- Email verification (for 'yes' path) ----------
-def send_scan_verification_email(token, email, website, plan):
-    verify_url = url_for('verify_scan', token=token, _external=True)
-    msg = Message(
-        subject='Verify your scan request for Nexus Security',
-        recipients=[email]
-    )
-    msg.body = f"""Hello,
-
-You requested a security scan for {website} ({plan} plan).
-Please click the link below to confirm your email and start the scan:
-
-{verify_url}
-
-If you did not request this, please ignore this email.
-
-Nexus Security Team
-"""
-    mail.send(msg)
 
 @app.route('/verify_scan/<token>')
 def verify_scan(token):
@@ -450,7 +439,6 @@ def verify_scan(token):
     flash('Scan confirmed! We will start the scan shortly.', 'success')
     return redirect(url_for('profile'))
 
-# ---------- Manual code verification ----------
 @app.route('/api/verify_code', methods=['POST'])
 @login_required
 def verify_code():
@@ -531,7 +519,6 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# ---------- View Report ----------
 @app.route('/view_report/<int:job_id>')
 @login_required
 def view_report(job_id):
@@ -544,7 +531,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Legacy email verification ----------
+# ---------- Legacy endpoints (keep for compatibility) ----------
 @app.route('/send_verification', methods=['POST'])
 @login_required
 def send_verification():
@@ -557,13 +544,16 @@ def send_verification():
     db.session.add(verif)
     db.session.commit()
     verify_url = url_for('verify_email', token=token, _external=True)
-    msg = Message(
-        subject='Verify your email for Nexus Security scan',
-        recipients=[email]
-    )
-    msg.body = f"Hello,\n\nYou requested a security scan for {website} ({plan} plan).\nPlease click the link below to confirm your email and start the scan:\n\n{verify_url}\n\nIf you did not request this, please ignore this email.\n\nNexus Security Team"
+    email_content = f"""
+    <p>Hello,</p>
+    <p>You requested a security scan for {website} ({plan} plan).</p>
+    <p>Please click the link below to confirm your email and start the scan:</p>
+    <p><a href="{verify_url}">Confirm Scan</a></p>
+    <p>If you did not request this, please ignore this email.</p>
+    <p>Nexus Security Team</p>
+    """
     try:
-        mail.send(msg)
+        send_brevo_email(email, 'Verify your email for Nexus Security scan', email_content)
         return jsonify({'success': True, 'message': 'Verification email sent'})
     except Exception as e:
         print(f"Email sending failed: {e}")
@@ -591,13 +581,10 @@ def verify_email(token):
     </div></body></html>
     """
 
-# ---------- TEST EMAIL ENDPOINT (remove after debugging) ----------
 @app.route('/test-email')
 def test_email():
     try:
-        msg = Message('Test Subject', recipients=['hitesh.tanwar8318@gmail.com'])
-        msg.body = 'This is a test email from Nexus Security.'
-        mail.send(msg)
+        send_brevo_email('hitesh.tanwar8318@gmail.com', 'Test from Nexus Security', '<p>This is a test email.</p>')
         return '✅ Email sent successfully! Check your inbox.'
     except Exception as e:
         return f'❌ Error: {str(e)}'
