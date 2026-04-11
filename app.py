@@ -133,10 +133,15 @@ def login():
 
 @app.route('/login/google')
 def google_login():
-    redirect_url = url_for('auth_callback', _external=True)
+    # ✅ Use BASE_URL from environment to avoid localhost redirect
+    base_url = os.getenv('BASE_URL')
+    if not base_url:
+        # Fallback for local development
+        base_url = request.host_url.rstrip('/')
+    callback_url = f"{base_url}/auth/callback"
     response = supabase.auth.sign_in_with_oauth({
         "provider": "google",
-        "options": {"redirect_to": redirect_url}
+        "options": {"redirect_to": callback_url}
     })
     return redirect(response.url)
 
@@ -278,8 +283,8 @@ th {{ background: #1a1a2a; }}
 <p><strong>Plan:</strong> {job.plan_type.upper()}</p>
 <p><strong>Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
 <h2>Vulnerabilities Found ({len(vulns)})</h2>
-<table>
-<tr><th>Name</th><th>Severity</th><th>Description</th></tr>
+</table>
+<th>Name</th><th>Severity</th><th>Description</th>
 """
     for v in vulns:
         severity_class = v['severity'].lower()
