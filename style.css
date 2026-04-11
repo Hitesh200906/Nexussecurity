@@ -1747,6 +1747,7 @@ body::after {
 
 /* ============================================
    VERIFICATION SYSTEM – PROFESSIONAL STYLES
+   (with enhanced selected state)
 ============================================ */
 
 /* Verification method cards container */
@@ -1798,7 +1799,7 @@ body::after {
 .method-card label i {
     font-size: 2.2rem;
     color: var(--accent);
-    transition: transform 0.2s;
+    transition: transform 0.2s, color 0.2s;
 }
 
 .method-card:hover label i {
@@ -1817,12 +1818,39 @@ body::after {
     line-height: 1.4;
 }
 
-/* Selected state for the method card */
+/* ========== SELECTED STATE (when radio is checked) ========== */
 .method-card.selected {
     border-color: var(--accent);
-    background: rgba(47, 155, 155, 0.1);
-    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(0,0,0,0.2);
+    background: rgba(47, 155, 155, 0.15);
+    box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgba(47, 155, 155, 0.3);
+    transform: scale(1.01);
 }
+
+.method-card.selected label i {
+    color: var(--accent-light);
+    text-shadow: 0 0 5px rgba(47, 155, 155, 0.5);
+}
+
+.method-card.selected label strong {
+    color: var(--accent-light);
+}
+
+.method-card.selected label span {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Optional: add a subtle pulse animation on selection */
+.method-card.selected {
+    animation: gentlePulse 0.3s ease-out;
+}
+
+@keyframes gentlePulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(47, 155, 155, 0.7); }
+    70% { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(47, 155, 155, 0.3); }
+    100% { transform: scale(1.01); box-shadow: 0 0 0 2px var(--accent); }
+}
+
+/* ========== Rest of the verification styles (unchanged) ========== */
 
 /* Manual code panel (initially hidden) */
 .manual-code-panel {
@@ -1986,4 +2014,90 @@ body::after {
     .instruction {
         font-size: 0.75rem;
     }
+}
+
+
+
+
+
+
+
+
+
+/* Modal Message Box (for selected messages only) */
+.modal-message-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-message-card {
+    background: #0a0a0f;
+    border: 1px solid var(--accent);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 35px -10px rgba(0,0,0,0.5);
+    animation: slideUp 0.3s ease;
+}
+
+.modal-message-card i {
+    font-size: 3rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+.modal-message-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.modal-message-card p {
+    color: var(--text-muted);
+    margin: 1rem 0;
+    line-height: 1.5;
+}
+
+.modal-message-card .modal-message-button {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+}
+
+.modal-message-card .modal-message-button:hover {
+    background: var(--accent-light);
+    transform: scale(1.02);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Keep old message box for other messages (optional) */
+.message-box {
+    /* keep existing styles if you still want toasts for other messages */
 }

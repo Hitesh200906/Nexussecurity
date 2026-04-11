@@ -5,8 +5,49 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // ---------- Helper: show message ----------
-    function showMessage(message, isError = false) {
+    // ---------- NEW: Modal message for selected messages ----------
+    const modalMessagesList = [
+        "Please choose a verification method.",
+        "Could not reach website",
+        "Could not find",
+        "Verification email sent to",
+        "Verification code generated!",
+        "Missing verification data. Please start again.",
+        "Code expired. Please request a new scan.",
+        "Code \"",
+        "✅ Verification successful!",
+        "Scan started! You will receive the report on your profile page.",
+        "No scans yet. Start a scan from the home page.",
+        "Report is not ready yet. Please check back later."
+    ];
+
+    function showModalMessage(message, isError = false) {
+        // Remove any existing modal
+        const existingOverlay = document.querySelector('.modal-message-overlay');
+        if (existingOverlay) existingOverlay.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-message-overlay';
+        const card = document.createElement('div');
+        card.className = 'modal-message-card';
+        const icon = isError ? '<i class="fas fa-exclamation-triangle"></i>' : '<i class="fas fa-check-circle"></i>';
+        const title = isError ? 'Error' : 'Success';
+        card.innerHTML = `
+            ${icon}
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <button class="modal-message-button">Got it</button>
+        `;
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const closeBtn = card.querySelector('.modal-message-button');
+        closeBtn.addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // Old toast function (kept for other messages)
+    function showToastMessage(message, isError = false) {
         const box = document.getElementById('messageBox');
         if (!box) return;
         const text = document.getElementById('messageText');
@@ -14,6 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
         box.style.display = 'flex';
         box.style.borderLeftColor = isError ? '#ef4444' : '#2f9b9b';
         setTimeout(() => { box.style.display = 'none'; }, 5000);
+    }
+
+    // Main showMessage – decides which UI to use
+    function showMessage(message, isError = false) {
+        let useModal = false;
+        for (let pattern of modalMessagesList) {
+            if (message.includes(pattern) || message.startsWith(pattern)) {
+                useModal = true;
+                break;
+            }
+        }
+        if (useModal) {
+            showModalMessage(message, isError);
+        } else {
+            showToastMessage(message, isError);
+        }
     }
 
     // ---------- Update auth button ----------
@@ -211,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- Close message button ----------
+    // ---------- Close message button (for toast) ----------
     const closeMsgBtn = document.getElementById('closeMessage');
     if (closeMsgBtn) {
         closeMsgBtn.addEventListener('click', () => {
@@ -252,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (form.dataset.verified === 'true') {
                 // Just show a message and do nothing else (scan already pending)
                 showMessage('Scan started! You will receive the report on your profile page.');
-                // Optionally disable the button to prevent multiple clicks
                 startBtn.disabled = true;
                 startBtn.textContent = 'Scan Started';
                 return;
@@ -352,17 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        // Show popup message: "you can now scan your website by simply pressing the Start Scan button"
                         showMessage('✅ Verification successful! You can now scan your website by simply pressing the Start Scan button.');
                         if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ ' + data.message + '</span>';
-                        // Hide the manual panel
                         manualPanel.style.display = 'none';
-                        // Re-enable the original start button, change its text and mark form as verified
                         startBtn.disabled = false;
                         startBtn.textContent = 'Start Scan';
                         startBtn.style.display = 'block';
-                        form.dataset.verified = 'true';   // mark so next click just shows message
-                        // Remove any "Start Scan Now" button if accidentally present
+                        form.dataset.verified = 'true';
                         const existingStartNow = form.parentElement?.querySelector('.start-scan-now-btn');
                         if (existingStartNow) existingStartNow.remove();
                     } else {
