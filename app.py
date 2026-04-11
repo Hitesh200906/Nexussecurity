@@ -41,7 +41,6 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
-# Print email config for debugging (remove in production)
 print("📧 Email config loaded:")
 print(f"  MAIL_SERVER: {app.config['MAIL_SERVER']}")
 print(f"  MAIL_PORT: {app.config['MAIL_PORT']}")
@@ -218,13 +217,15 @@ th {{ background: #1a1a2a; }}
     job.completed_at = datetime.utcnow()
     db.session.commit()
 
+# ✅ FIXED: background worker runs inside app context
 def background_worker():
-    while True:
-        pending_jobs = ScanJob.query.filter_by(status='pending').all()
-        for job in pending_jobs:
-            time.sleep(5)
-            generate_report_for_job(job.id)
-        time.sleep(10)
+    with app.app_context():
+        while True:
+            pending_jobs = ScanJob.query.filter_by(status='pending').all()
+            for job in pending_jobs:
+                time.sleep(5)
+                generate_report_for_job(job.id)
+            time.sleep(10)
 
 if not hasattr(app, 'scanner_started'):
     thread = threading.Thread(target=background_worker, daemon=True)
@@ -346,12 +347,10 @@ def request_scan():
                 )
                 db.session.add(pending)
                 db.session.commit()
-                # Try to send email and handle failure
                 try:
                     send_scan_verification_email(token, business_email, website_url, plan)
                     return jsonify({'success': True, 'message': f'Verification email sent to {business_email}'})
                 except Exception as mail_err:
-                    # Rollback the pending scan if email fails
                     db.session.rollback()
                     print(f"❌ Email sending failed: {mail_err}")
                     return jsonify({'success': False, 'message': f'Failed to send email: {str(mail_err)}'}), 500
@@ -435,7 +434,6 @@ def verify_scan(token):
     db.session.commit()
 
     flash('Scan confirmed! We will start the scan shortly.', 'success')
-    # ✅ REDIRECT TO PROFILE (instead of index)
     return redirect(url_for('profile'))
 
 # ---------- Manual code verification ----------
