@@ -1,11 +1,11 @@
-// script.js – Nexus Security (Professional Dual Verification)
+// script.js – Nexus Security (Redirect to Profile After Any Successful Verification)
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof fetch === 'undefined') {
         console.error('fetch() is not supported. Please update your browser.');
         return;
     }
 
-    // ---------- NEW: Modal message for selected messages ----------
+    // ---------- Modal message for selected messages ----------
     const modalMessagesList = [
         "Please choose a verification method.",
         "Could not reach website",
@@ -16,13 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
         "Code expired. Please request a new scan.",
         "Code \"",
         "✅ Verification successful!",
-        "Scan started! You will receive the report on your profile page.",
         "No scans yet. Start a scan from the home page.",
         "Report is not ready yet. Please check back later."
     ];
 
-    function showModalMessage(message, isError = false) {
-        // Remove any existing modal
+    function showModalMessage(message, isError = false, onClose = null) {
         const existingOverlay = document.querySelector('.modal-message-overlay');
         if (existingOverlay) existingOverlay.remove();
 
@@ -42,11 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(overlay);
 
         const closeBtn = card.querySelector('.modal-message-button');
-        closeBtn.addEventListener('click', () => overlay.remove());
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        const closeModal = () => {
+            overlay.remove();
+            if (onClose) onClose();
+        };
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
     }
 
-    // Old toast function (kept for other messages)
     function showToastMessage(message, isError = false) {
         const box = document.getElementById('messageBox');
         if (!box) return;
@@ -57,8 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { box.style.display = 'none'; }, 5000);
     }
 
-    // Main showMessage – decides which UI to use
-    function showMessage(message, isError = false) {
+    function showMessage(message, isError = false, onClose = null) {
         let useModal = false;
         for (let pattern of modalMessagesList) {
             if (message.includes(pattern) || message.startsWith(pattern)) {
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (useModal) {
-            showModalMessage(message, isError);
+            showModalMessage(message, isError, onClose);
         } else {
             showToastMessage(message, isError);
         }
@@ -232,15 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset UI elements
             const manualPanel = targetSection.querySelector('.manual-code-panel');
             if (manualPanel) manualPanel.style.display = 'none';
-            const startBtn = targetSection.querySelector('.start-scan-btn');
-            if (startBtn) {
-                startBtn.disabled = true;
-                startBtn.textContent = 'Select verification method first';
-                startBtn.style.display = 'block';
-            }
-            // Remove any extra "start scan now" button if present
-            const existingStartNow = targetSection.querySelector('.start-scan-now-btn');
-            if (existingStartNow) existingStartNow.remove();
+            const verifyNowBtn = targetSection.querySelector('.verify-now-btn');
+            if (verifyNowBtn) verifyNowBtn.style.display = 'none';
+            // Clear any stored data
             delete form?.dataset.verificationId;
             delete form?.dataset.websiteUrl;
             delete form?.dataset.jobId;
@@ -276,52 +270,115 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- SCAN FORM HANDLER ----------
+    // ---------- SCAN FORM HANDLER (Redesigned with redirect to profile) ----------
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
         const methodRadios = form.querySelectorAll('input[name="emailOnSite"]');
-        const startBtn = form.querySelector('.start-scan-btn');
         const manualPanel = form.querySelector('.manual-code-panel');
         const verifyBtn = form.querySelector('.verify-code-btn');
         const copyBtn = form.querySelector('.copy-code-btn');
         const codeSpan = form.querySelector('.verification-code');
         const verifyStatusDiv = form.querySelector('.verify-status');
 
-        // Enable start button when a verification method is selected
+        // Create dynamic "Verify Now" button if it doesn't exist
+        let verifyNowBtn = form.querySelector('.verify-now-btn');
+        if (!verifyNowBtn) {
+            verifyNowBtn = document.createElement('button');
+            verifyNowBtn.className = 'btn-53 verify-now-btn';
+            verifyNowBtn.textContent = 'Verify Now';
+            verifyNowBtn.style.display = 'none';
+            verifyNowBtn.style.marginTop = '1rem';
+            form.appendChild(verifyNowBtn);
+        }
+
+        // When a verification method is selected
         methodRadios.forEach(radio => {
             radio.addEventListener('change', () => {
                 if (radio.checked) {
-                    startBtn.disabled = false;
-                    startBtn.textContent = 'Start Scan';
-                    startBtn.style.display = 'block';
-                    if (radio.value === 'yes' && manualPanel) {
+                    if (radio.value === 'yes') {
+                        // Email method: show "Verify Now", hide manual panel
+                        verifyNowBtn.style.display = 'block';
                         manualPanel.style.display = 'none';
+                    } else {
+                        // Manual method: automatically generate code
+                        generateCodeForManual(form, verifyNowBtn, manualPanel, codeSpan, verifyStatusDiv);
                     }
                 }
             });
         });
 
-        // Start Scan button click (first step: generate code or send email)
-        startBtn.addEventListener('click', async () => {
-            if (startBtn.disabled) return;
-
-            // If this form has already been verified (manual code flow), then this click means "start the scan"
-            if (form.dataset.verified === 'true') {
-                // Just show a message and do nothing else (scan already pending)
-                showMessage('Scan started! You will receive the report on your profile page.');
-                startBtn.disabled = true;
-                startBtn.textContent = 'Scan Started';
-                return;
-            }
-
-            const selectedRadio = form.querySelector('input[name="emailOnSite"]:checked');
-            if (!selectedRadio) {
-                showMessage('Please choose a verification method.', true);
-                return;
-            }
-            const emailOnSite = selectedRadio.value;
-
+        // Function to generate code for manual method (called immediately when selected)
+        async function generateCodeForManual(form, verifyNowBtn, manualPanel, codeSpan, verifyStatusDiv) {
             // Gather form data
+            const fullName = form.querySelector('[name="fullName"]').value.trim();
+            const role = form.querySelector('[name="role"]').value.trim();
+            const companyName = form.querySelector('[name="companyName"]').value.trim();
+            const userEmail = form.querySelector('[name="userEmail"]').value.trim();
+            const websiteUrl = form.querySelector('[name="websiteUrl"]').value.trim();
+            const businessEmail = form.querySelector('[name="businessEmail"]').value.trim();
+            const plan = form.getAttribute('data-plan') || selectedPlan;
+
+            if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail) {
+                showMessage('Please fill all fields first.', true);
+                const manualRadio = form.querySelector('input[name="emailOnSite"][value="no"]');
+                if (manualRadio) manualRadio.checked = false;
+                return;
+            }
+            try { new URL(websiteUrl); } catch (_) {
+                showMessage('Invalid website URL.', true);
+                const manualRadio = form.querySelector('input[name="emailOnSite"][value="no"]');
+                if (manualRadio) manualRadio.checked = false;
+                return;
+            }
+
+            const manualRadio = form.querySelector('input[name="emailOnSite"][value="no"]');
+            if (manualRadio) manualRadio.disabled = true;
+
+            const formData = new FormData();
+            formData.append('fullName', fullName);
+            formData.append('role', role);
+            formData.append('companyName', companyName);
+            formData.append('userEmail', userEmail);
+            formData.append('websiteUrl', websiteUrl);
+            formData.append('businessEmail', businessEmail);
+            formData.append('plan', plan);
+            formData.append('emailOnSite', 'no');
+
+            try {
+                const response = await fetch('/api/request_scan', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showMessage('Verification code generated! Copy and paste it on your website.');
+                    if (codeSpan) codeSpan.textContent = data.code;
+                    manualPanel.style.display = 'block';
+                    form.dataset.verificationId = data.token;
+                    form.dataset.websiteUrl = websiteUrl;
+                    verifyNowBtn.style.display = 'none';
+                } else {
+                    showMessage(data.message || 'Failed to generate code', true);
+                    if (manualRadio) {
+                        manualRadio.disabled = false;
+                        manualRadio.checked = false;
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                showMessage('Network error', true);
+                if (manualRadio) {
+                    manualRadio.disabled = false;
+                    manualRadio.checked = false;
+                }
+            }
+        }
+
+        // Verify Now button (email method)
+        verifyNowBtn.addEventListener('click', async () => {
+            const selectedRadio = form.querySelector('input[name="emailOnSite"]:checked');
+            if (!selectedRadio || selectedRadio.value !== 'yes') return;
+
             const fullName = form.querySelector('[name="fullName"]').value.trim();
             const role = form.querySelector('[name="role"]').value.trim();
             const companyName = form.querySelector('[name="companyName"]').value.trim();
@@ -339,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            startBtn.disabled = true;
-            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            verifyNowBtn.disabled = true;
+            verifyNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
 
             const formData = new FormData();
             formData.append('fullName', fullName);
@@ -350,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('websiteUrl', websiteUrl);
             formData.append('businessEmail', businessEmail);
             formData.append('plan', plan);
-            formData.append('emailOnSite', emailOnSite);
+            formData.append('emailOnSite', 'yes');
 
             try {
                 const response = await fetch('/api/request_scan', {
@@ -358,44 +415,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: formData
                 });
                 const data = await response.json();
-
-                if (!data.success) {
-                    showMessage(data.message || 'Request failed', true);
-                    startBtn.disabled = false;
-                    startBtn.innerHTML = 'Start Scan';
-                    return;
-                }
-
-                if (emailOnSite === 'yes') {
-                    // Email flow: show message and hide the section
+                if (data.success) {
                     showMessage(data.message);
+                    // Email sent – user will click the link and be redirected to profile.
+                    // We can hide the form section.
                     const parentSection = form.closest('.plan-url-section');
                     if (parentSection) parentSection.style.display = 'none';
                 } else {
-                    // Manual code flow
-                    showMessage('Verification code generated! Copy and paste it on your website.');
-                    if (codeSpan) codeSpan.textContent = data.code;
-                    if (manualPanel) manualPanel.style.display = 'block';
-                    form.dataset.verificationId = data.token;
-                    form.dataset.websiteUrl = websiteUrl;
-                    startBtn.disabled = true;
-                    startBtn.textContent = 'Waiting for code verification...';
+                    showMessage(data.message || 'Failed to send verification email', true);
                 }
             } catch (err) {
                 console.error(err);
-                showMessage('Network error', true);
-                startBtn.disabled = false;
-                startBtn.innerHTML = 'Start Scan';
+                showMessage('Network error. Please try again.', true);
+            } finally {
+                verifyNowBtn.disabled = false;
+                verifyNowBtn.innerHTML = 'Verify Now';
             }
         });
 
-        // Verify Code button (manual path)
+        // Verify Code button (manual path) – on success, redirect to profile
         if (verifyBtn) {
             verifyBtn.addEventListener('click', async () => {
                 const verificationId = form.dataset.verificationId;
                 const websiteUrl = form.dataset.websiteUrl;
                 if (!verificationId || !websiteUrl) {
-                    showMessage('Missing verification data. Please start again.', true);
+                    showMessage('Missing verification data. Please select manual method again.', true);
                     return;
                 }
                 verifyBtn.disabled = true;
@@ -408,15 +452,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        showMessage('✅ Verification successful! You can now scan your website by simply pressing the Start Scan button.');
+                        // Show success message and then redirect to profile
+                        showMessage('✅ Verification successful! Redirecting to your profile...', false, () => {
+                            window.location.href = '/profile';
+                        });
                         if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ ' + data.message + '</span>';
                         manualPanel.style.display = 'none';
-                        startBtn.disabled = false;
-                        startBtn.textContent = 'Start Scan';
-                        startBtn.style.display = 'block';
-                        form.dataset.verified = 'true';
-                        const existingStartNow = form.parentElement?.querySelector('.start-scan-now-btn');
-                        if (existingStartNow) existingStartNow.remove();
+                        // Also hide the verification method radios to prevent confusion
+                        methodRadios.forEach(r => r.disabled = true);
+                        // Fallback redirect in case modal onClose doesn't fire
+                        setTimeout(() => {
+                            window.location.href = '/profile';
+                        }, 3000);
                     } else {
                         showMessage(data.message, true);
                         verifyBtn.disabled = false;
