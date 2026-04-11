@@ -9,180 +9,69 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Additional styles for the message box (in case style.css doesn't have them) */
-        .message-toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            max-width: 400px;
-            background: #0a0a0f;
-            border-left: 4px solid #2f9b9b;
-            border-radius: 8px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 10000;
-            backdrop-filter: blur(10px);
-            animation: slideIn 0.3s ease-out;
-            font-family: 'Inter', sans-serif;
-        }
-        .message-toast.error {
-            border-left-color: #ef4444;
-        }
-        .message-toast.success {
-            border-left-color: #2f9b9b;
-        }
-        .message-toast i {
-            font-size: 1.5rem;
-        }
-        .message-toast .message-text {
-            flex: 1;
-            color: #fff;
-            font-size: 0.95rem;
-        }
-        .message-toast .close-message {
-            background: none;
-            border: none;
-            color: #aaa;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: color 0.2s;
-        }
-        .message-toast .close-message:hover {
-            color: #fff;
-        }
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        @keyframes slideOut {
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
+        /* message-toast styles (same as before) */
+        .message-toast { position: fixed; bottom: 30px; right: 30px; max-width: 400px; background: #0a0a0f; border-left: 4px solid #2f9b9b; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; z-index: 10000; backdrop-filter: blur(10px); animation: slideIn 0.3s ease-out; font-family: 'Inter', sans-serif; }
+        .message-toast.error { border-left-color: #ef4444; }
+        .message-toast.success { border-left-color: #2f9b9b; }
+        .message-toast i { font-size: 1.5rem; }
+        .message-toast .message-text { flex: 1; color: #fff; font-size: 0.95rem; }
+        .message-toast .close-message { background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.2rem; }
+        .message-toast .close-message:hover { color: #fff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { to { transform: translateX(100%); opacity: 0; } }
     </style>
 </head>
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
-
     <nav class="navbar">
-        <div class="logo">
-            <h1>NEXUS SECURITY</h1>
-        </div>
+        <div class="logo"><h1>NEXUS SECURITY</h1></div>
         <div class="nav-links">
             <a href="index.html">Home</a>
             <a href="index.html#plans">Plans</a>
             <div id="authButtonContainer"></div>
         </div>
     </nav>
-
-    <div class="particle-bg">
-        <canvas id="particleCanvas"></canvas>
-    </div>
-
+    <div class="particle-bg"><canvas id="particleCanvas"></canvas></div>
     <div class="auth-container">
         <div class="auth-card">
-            <div class="auth-header">
-                <h2>Welcome back</h2>
-                <p>Sign in to continue your security journey</p>
-            </div>
-
-            <div class="auth-tabs">
-                <button class="tab-btn active" id="loginTab">Login</button>
-                <button class="tab-btn" id="signupTab">Sign Up</button>
-                <div class="tab-indicator"></div>
-            </div>
-
-            <!-- Login Form -->
+            <div class="auth-header"><h2>Welcome back</h2><p>Sign in to continue your security journey</p></div>
+            <div class="auth-tabs"><button class="tab-btn active" id="loginTab">Login</button><button class="tab-btn" id="signupTab">Sign Up</button><div class="tab-indicator"></div></div>
             <div id="loginForm" class="auth-form active">
-                <div class="form-group">
-                    <input type="email" id="loginEmail" placeholder="Email address" required>
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="loginPassword" placeholder="Password" required>
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <div class="form-options">
-                    <label class="checkbox">
-                        <input type="checkbox" id="rememberMe"> <span>Remember me</span>
-                    </label>
-                    <a href="#" class="forgot-link">Forgot password?</a>
-                </div>
-                <button id="doLogin" class="btn-53" data-plan="login">
-                    <div class="original">LOG IN</div>
-                    <div class="letters">
-                        <span>L</span><span>O</span><span>G</span><span>&nbsp;</span>
-                        <span>I</span><span>N</span>
-                    </div>
-                </button>
+                <div class="form-group"><input type="email" id="loginEmail" placeholder="Email address" required><i class="fas fa-envelope input-icon"></i></div>
+                <div class="form-group"><input type="password" id="loginPassword" placeholder="Password" required><i class="fas fa-lock input-icon"></i></div>
+                <div class="form-options"><label class="checkbox"><input type="checkbox" id="rememberMe"> <span>Remember me</span></label><a href="#" class="forgot-link">Forgot password?</a></div>
+                <button id="doLogin" class="btn-53" data-plan="login"><div class="original">LOG IN</div><div class="letters"><span>L</span><span>O</span><span>G</span><span>&nbsp;</span><span>I</span><span>N</span></div></button>
                 <p class="auth-divider">or</p>
-                <button id="googleLogin" class="btn-google">
+                <!-- ✅ CHANGE: Google button now redirects to Supabase OAuth -->
+                <button id="googleLogin" class="btn-google" onclick="window.location.href='/login/google'">
                     <i class="fab fa-google"></i> Continue with Google
                 </button>
             </div>
-
-            <!-- Signup Form -->
             <div id="signupForm" class="auth-form">
-                <div class="form-group">
-                    <input type="text" id="signupName" placeholder="Full name" required>
-                    <i class="fas fa-user input-icon"></i>
-                </div>
-                <div class="form-group">
-                    <input type="email" id="signupEmail" placeholder="Email address" required>
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="signupPassword" placeholder="Password" required>
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required>
-                    <i class="fas fa-check-circle input-icon"></i>
-                </div>
-                <button id="doSignup" class="btn-53" data-plan="signup">
-                    <div class="original">SIGN UP</div>
-                    <div class="letters">
-                        <span>S</span><span>I</span><span>G</span><span>N</span><span>&nbsp;</span>
-                        <span>U</span><span>P</span>
-                    </div>
-                </button>
+                <div class="form-group"><input type="text" id="signupName" placeholder="Full name" required><i class="fas fa-user input-icon"></i></div>
+                <div class="form-group"><input type="email" id="signupEmail" placeholder="Email address" required><i class="fas fa-envelope input-icon"></i></div>
+                <div class="form-group"><input type="password" id="signupPassword" placeholder="Password" required><i class="fas fa-lock input-icon"></i></div>
+                <div class="form-group"><input type="password" id="signupConfirmPassword" placeholder="Confirm password" required><i class="fas fa-check-circle input-icon"></i></div>
+                <button id="doSignup" class="btn-53" data-plan="signup"><div class="original">SIGN UP</div><div class="letters"><span>S</span><span>I</span><span>G</span><span>N</span><span>&nbsp;</span><span>U</span><span>P</span></div></button>
                 <p class="auth-divider">or</p>
-                <button id="googleSignup" class="btn-google">
+                <!-- ✅ Same change here -->
+                <button id="googleSignup" class="btn-google" onclick="window.location.href='/login/google'">
                     <i class="fab fa-google"></i> Continue with Google
                 </button>
             </div>
         </div>
     </div>
-
-    <footer>
-        <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
-    </footer>
-
-    <!-- Message Toast Container (will be created dynamically) -->
+    <footer><p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p></footer>
     <div id="messageToastContainer"></div>
-
     <script src="script.js"></script>
     <script>
-        // Particle background animation (unchanged)
+        // Particle background animation (unchanged – keep your existing code)
         const canvas = document.getElementById('particleCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
         let animationId = null;
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
@@ -214,27 +103,20 @@
         function initParticles() {
             particles = [];
             const count = Math.min(150, Math.floor(canvas.width * canvas.height / 8000));
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle());
-            }
+            for (let i = 0; i < count; i++) particles.push(new Particle());
         }
 
         function animateParticles() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let p of particles) {
-                p.update();
-                p.draw();
-            }
+            for (let p of particles) { p.update(); p.draw(); }
             animationId = requestAnimationFrame(animateParticles);
         }
 
         initParticles();
         animateParticles();
+        window.addEventListener('beforeunload', () => { if (animationId) cancelAnimationFrame(animationId); });
 
-        window.addEventListener('beforeunload', () => {
-            if (animationId) cancelAnimationFrame(animationId);
-        });
-
+        // Tab switching (unchanged)
         const loginTab = document.getElementById('loginTab');
         const signupTab = document.getElementById('signupTab');
         const loginForm = document.getElementById('loginForm');
@@ -268,164 +150,28 @@
 
         loginTab.addEventListener('click', () => setActiveTab('login'));
         signupTab.addEventListener('click', () => setActiveTab('signup'));
-
-        window.addEventListener('load', () => {
-            updateIndicator('login');
-        });
+        window.addEventListener('load', () => updateIndicator('login'));
         window.addEventListener('resize', () => {
             const activeTab = loginTab.classList.contains('active') ? 'login' : 'signup';
             updateIndicator(activeTab);
         });
 
-        // ----- Styled Message Box Function -----
+        // Optional: styled message box (same as before)
         function showStyledMessage(message, isError = false) {
             const container = document.getElementById('messageToastContainer');
             if (!container) return;
-
-            // Create toast element
             const toast = document.createElement('div');
             toast.className = `message-toast ${isError ? 'error' : 'success'}`;
             const icon = isError ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
-            toast.innerHTML = `
-                ${icon}
-                <div class="message-text">${message}</div>
-                <button class="close-message"><i class="fas fa-times"></i></button>
-            `;
+            toast.innerHTML = `${icon}<div class="message-text">${message}</div><button class="close-message"><i class="fas fa-times"></i></button>`;
             container.appendChild(toast);
-
-            // Close button functionality
             const closeBtn = toast.querySelector('.close-message');
-            closeBtn.addEventListener('click', () => {
-                toast.style.animation = 'slideOut 0.3s ease-out forwards';
-                setTimeout(() => toast.remove(), 300);
-            });
-
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.style.animation = 'slideOut 0.3s ease-out forwards';
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 5000);
+            closeBtn.addEventListener('click', () => { toast.style.animation = 'slideOut 0.3s ease-out forwards'; setTimeout(() => toast.remove(), 300); });
+            setTimeout(() => { if (toast.parentNode) { toast.style.animation = 'slideOut 0.3s ease-out forwards'; setTimeout(() => toast.remove(), 300); } }, 5000);
         }
 
-        // ----- Override login and signup with styled messages and redirect to home -----
-        (function() {
-            // Login button
-            const loginBtn = document.getElementById('doLogin');
-            if (loginBtn) {
-                const newLoginBtn = loginBtn.cloneNode(true);
-                loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
-                
-                newLoginBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('loginEmail').value.trim();
-                    const password = document.getElementById('loginPassword').value;
-                    
-                    if (!email || !password) {
-                        showStyledMessage('Please fill in both fields.', true);
-                        return;
-                    }
-                    
-                    const originalHTML = newLoginBtn.innerHTML;
-                    newLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-                    newLoginBtn.disabled = true;
-                    
-                    try {
-                        const response = await fetch('/api/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, password })
-                        });
-                        const data = await response.json();
-                        
-                        if (response.ok && data.success) {
-                            showStyledMessage('✅ Login successful! Redirecting...');
-                            setTimeout(() => {
-                                window.location.href = '/index.html?t=' + Date.now();
-                            }, 1000);
-                        } else {
-                            showStyledMessage(data.message || 'Login failed.', true);
-                            newLoginBtn.innerHTML = originalHTML;
-                            newLoginBtn.disabled = false;
-                            if (data.message && data.message.includes('No account found')) {
-                                const signupTabBtn = document.getElementById('signupTab');
-                                if (signupTabBtn) signupTabBtn.click();
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Login error:', error);
-                        showStyledMessage('Network error. Please try again.', true);
-                        newLoginBtn.innerHTML = originalHTML;
-                        newLoginBtn.disabled = false;
-                    }
-                });
-            }
-            
-            // Signup button
-            const signupBtn = document.getElementById('doSignup');
-            if (signupBtn) {
-                const newSignupBtn = signupBtn.cloneNode(true);
-                signupBtn.parentNode.replaceChild(newSignupBtn, signupBtn);
-                
-                newSignupBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    const name = document.getElementById('signupName').value.trim();
-                    const email = document.getElementById('signupEmail').value.trim();
-                    const password = document.getElementById('signupPassword').value;
-                    const confirm = document.getElementById('signupConfirmPassword').value;
-                    
-                    if (!name || !email || !password) {
-                        showStyledMessage('Please fill in all fields.', true);
-                        return;
-                    }
-                    if (password !== confirm) {
-                        showStyledMessage('Passwords do not match.', true);
-                        return;
-                    }
-                    
-                    const originalHTML = newSignupBtn.innerHTML;
-                    newSignupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
-                    newSignupBtn.disabled = true;
-                    
-                    try {
-                        const response = await fetch('/api/register', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name, email, password })
-                        });
-                        const data = await response.json();
-                        
-                        if (response.ok && data.success) {
-                            showStyledMessage('✅ Account created! Redirecting...');
-                            setTimeout(() => {
-                                window.location.href = '/index.html?t=' + Date.now();
-                            }, 1000);
-                        } else {
-                            showStyledMessage(data.message || 'Registration failed.', true);
-                            newSignupBtn.innerHTML = originalHTML;
-                            newSignupBtn.disabled = false;
-                        }
-                    } catch (error) {
-                        console.error('Registration error:', error);
-                        showStyledMessage('An error occurred. Please try again.', true);
-                        newSignupBtn.innerHTML = originalHTML;
-                        newSignupBtn.disabled = false;
-                    }
-                });
-            }
-            
-            // Google login buttons stay as they are (redirect to /login)
-            const googleBtns = [document.getElementById('googleLogin'), document.getElementById('googleSignup')];
-            googleBtns.forEach(btn => {
-                if (btn && !btn.hasAttribute('data-listener')) {
-                    btn.setAttribute('data-listener', 'true');
-                    btn.addEventListener('click', () => {
-                        window.location.href = '/login';
-                    });
-                }
-            });
-        })();
+        // The login/signup handlers remain the same (they call /api/login and /api/register)
+        // They are already defined in script.js, so we don't duplicate them here.
     </script>
 </body>
 </html>
