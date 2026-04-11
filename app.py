@@ -41,6 +41,15 @@ app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
 
+# Print email config for debugging (remove in production)
+print("📧 Email config loaded:")
+print(f"  MAIL_SERVER: {app.config['MAIL_SERVER']}")
+print(f"  MAIL_PORT: {app.config['MAIL_PORT']}")
+print(f"  MAIL_USE_TLS: {app.config['MAIL_USE_TLS']}")
+print(f"  MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+print(f"  MAIL_PASSWORD: {'*' * len(app.config['MAIL_PASSWORD']) if app.config['MAIL_PASSWORD'] else 'NOT SET'}")
+print(f"  MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
+
 mail = Mail(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -58,7 +67,6 @@ if os.getenv('GOOGLE_CLIENT_ID') and os.getenv('GOOGLE_CLIENT_SECRET'):
         client_kwargs={'scope': 'openid email profile'},
     )
 
-# Helper: generate 6‑character alphanumeric code
 def generate_verification_code():
     chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
     return ''.join(random.choices(chars, k=6))
@@ -96,7 +104,7 @@ class ScanJob(db.Model):
     company_name = db.Column(db.String(100))
     user_email = db.Column(db.String(120))
     business_email = db.Column(db.String(120))
-    verification_code = db.Column(db.String(10), nullable=True)   # for manual code flow
+    verification_code = db.Column(db.String(10), nullable=True)
 
 class VerificationToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -121,7 +129,6 @@ class PendingScan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used = db.Column(db.Boolean, default=False)
 
-# Table for temporary verification codes (manual path)
 class WebsiteVerificationCode(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -198,7 +205,7 @@ th {{ background: #1a1a2a; }}
     for v in vulns:
         severity_class = v['severity'].lower()
         html += f"<tr><td>{v['name']}</td><td class='{severity_class}'>{v['severity']}</td><td>{v['description']}</td></tr>"
-    html += """<tr>
+    html += """</table>
 <p>Remediation advice: Contact your developer to fix the issues listed above.</p>
 <p>Nexus Security Team</p>
 </body></html>"""
@@ -312,7 +319,7 @@ def request_scan():
     website_url = request.form.get('websiteUrl')
     business_email = request.form.get('businessEmail')
     plan = request.form.get('plan')
-    email_on_site = request.form.get('emailOnSite')   # 'yes' or 'no'
+    email_on_site = request.form.get('emailOnSite')
 
     if not all([full_name, role, company_name, user_email, website_url, business_email, plan, email_on_site]):
         return jsonify({'success': False, 'message': 'All fields required'}), 400
@@ -323,7 +330,7 @@ def request_scan():
             url = website_url if website_url.startswith(('http://', 'https://')) else 'http://' + website_url
             response = requests.get(url, timeout=10, headers={'User-Agent': 'Nexus-Security-Bot'})
             if response.status_code != 200:
-                return jsonify({'success': False, 'message': 'Could not reach website'}), 400
+                return jsonify({'success': False, 'message': f'Could not reach website (HTTP {response.status_code})'}), 400
             if business_email.lower() in response.text.lower():
                 token = secrets.token_urlsafe(32)
                 pending = PendingScan(
@@ -339,19 +346,29 @@ def request_scan():
                 )
                 db.session.add(pending)
                 db.session.commit()
-                send_scan_verification_email(token, business_email, website_url, plan)
-                return jsonify({'success': True, 'message': 'Verification email sent to ' + business_email})
+                # Try to send email and handle failure
+                try:
+                    send_scan_verification_email(token, business_email, website_url, plan)
+                    return jsonify({'success': True, 'message': f'Verification email sent to {business_email}'})
+                except Exception as mail_err:
+                    # Rollback the pending scan if email fails
+                    db.session.rollback()
+                    print(f"❌ Email sending failed: {mail_err}")
+                    return jsonify({'success': False, 'message': f'Failed to send email: {str(mail_err)}'}), 500
             else:
                 return jsonify({'success': False, 'message': f'Could not find {business_email} on {website_url}.'}), 400
+        except requests.exceptions.RequestException as e:
+            print(f"Request error: {e}")
+            return jsonify({'success': False, 'message': f'Could not reach website: {str(e)}'}), 400
         except Exception as e:
-            return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
+            print(f"Unexpected error: {e}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
 
-    # ---- PATH 2: Email NOT on website -> generate manual verification code (NO EMAIL) ----
-    else:  # email_on_site == 'no'
+    # ---- PATH 2: Email NOT on website -> generate manual verification code ----
+    else:
         code = generate_verification_code()
         while WebsiteVerificationCode.query.filter_by(code=code).first():
             code = generate_verification_code()
-        
         form_data = {
             'full_name': full_name,
             'role': role,
@@ -371,7 +388,6 @@ def request_scan():
         )
         db.session.add(verification_entry)
         db.session.commit()
-        
         return jsonify({'success': True, 'code': code, 'token': verification_entry.id, 'message': 'Verification code generated'})
 
 # ---------- Email verification (for 'yes' path) ----------
@@ -419,9 +435,10 @@ def verify_scan(token):
     db.session.commit()
 
     flash('Scan confirmed! We will start the scan shortly.', 'success')
-    return redirect(url_for('index'))
+    # ✅ REDIRECT TO PROFILE (instead of index)
+    return redirect(url_for('profile'))
 
-# ---------- Manual code verification (for 'no' path) – NO EMAIL SENT ----------
+# ---------- Manual code verification ----------
 @app.route('/api/verify_code', methods=['POST'])
 @login_required
 def verify_code():
@@ -443,7 +460,6 @@ def verify_code():
         if resp.status_code != 200:
             return jsonify({'success': False, 'message': 'Could not reach website'}), 400
         if verification.code in resp.text:
-            # Code found – create scan job (status = pending)
             verification.verified = True
             fd = verification.form_data
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
@@ -462,10 +478,9 @@ def verify_code():
             )
             db.session.add(job)
             db.session.commit()
-            # NO EMAIL SENT HERE
             return jsonify({'success': True, 'message': '✅ Verification successful! You can now start the scan.', 'job_id': job.id})
         else:
-            return jsonify({'success': False, 'message': f'Code "{verification.code}" not found on your website. Make sure you added it to the HTML source (e.g., as a hidden div or meta tag).'}), 400
+            return jsonify({'success': False, 'message': f'Code "{verification.code}" not found on your website. Make sure you added it to the HTML source.'}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
@@ -517,7 +532,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Legacy email verification (keep if needed) ----------
+# ---------- Legacy email verification ----------
 @app.route('/send_verification', methods=['POST'])
 @login_required
 def send_verification():
@@ -563,6 +578,17 @@ def verify_email(token):
     <a href="/">Return to Homepage</a>
     </div></body></html>
     """
+
+# ---------- TEST EMAIL ENDPOINT (remove after debugging) ----------
+@app.route('/test-email')
+def test_email():
+    try:
+        msg = Message('Test Subject', recipients=['hitesh.tanwar8318@gmail.com'])
+        msg.body = 'This is a test email from Nexus Security.'
+        mail.send(msg)
+        return '✅ Email sent successfully! Check your inbox.'
+    except Exception as e:
+        return f'❌ Error: {str(e)}'
 
 @app.route('/api/payment_mock', methods=['POST'])
 def payment_mock():
