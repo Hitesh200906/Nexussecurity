@@ -121,14 +121,14 @@ class PendingScan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used = db.Column(db.Boolean, default=False)
 
-# NEW TABLE: temporary codes for manual verification
+# Table for temporary verification codes (manual path)
 class WebsiteVerificationCode(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     code = db.Column(db.String(10), unique=True, nullable=False)
     website_url = db.Column(db.String(500), nullable=False)
     plan_type = db.Column(db.String(50), nullable=False)
-    form_data = db.Column(db.JSON, nullable=False)   # stores all form fields
+    form_data = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     verified = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=1))
@@ -140,7 +140,7 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ---------- Simulated scanning (keep as is) ----------
+# ---------- Simulated scanning ----------
 def generate_vulnerabilities(plan_type, url):
     vulns = []
     if plan_type == 'basic':
@@ -198,7 +198,7 @@ th {{ background: #1a1a2a; }}
     for v in vulns:
         severity_class = v['severity'].lower()
         html += f"<tr><td>{v['name']}</td><td class='{severity_class}'>{v['severity']}</td><td>{v['description']}</td></tr>"
-    html += """</table>
+    html += """<tr>
 <p>Remediation advice: Contact your developer to fix the issues listed above.</p>
 <p>Nexus Security Team</p>
 </body></html>"""
@@ -325,7 +325,6 @@ def request_scan():
             if response.status_code != 200:
                 return jsonify({'success': False, 'message': 'Could not reach website'}), 400
             if business_email.lower() in response.text.lower():
-                # Create pending scan with token
                 token = secrets.token_urlsafe(32)
                 pending = PendingScan(
                     user_id=current_user.id,
@@ -347,14 +346,12 @@ def request_scan():
         except Exception as e:
             return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
-    # ---- PATH 2: Email NOT on website -> generate manual verification code ----
+    # ---- PATH 2: Email NOT on website -> generate manual verification code (NO EMAIL) ----
     else:  # email_on_site == 'no'
-        # Generate unique code
         code = generate_verification_code()
         while WebsiteVerificationCode.query.filter_by(code=code).first():
             code = generate_verification_code()
         
-        # Store form data as JSON
         form_data = {
             'full_name': full_name,
             'role': role,
@@ -424,7 +421,7 @@ def verify_scan(token):
     flash('Scan confirmed! We will start the scan shortly.', 'success')
     return redirect(url_for('index'))
 
-# ---------- Manual code verification (for 'no' path) ----------
+# ---------- Manual code verification (for 'no' path) – NO EMAIL SENT ----------
 @app.route('/api/verify_code', methods=['POST'])
 @login_required
 def verify_code():
@@ -440,14 +437,13 @@ def verify_code():
     if verification.expires_at < datetime.utcnow():
         return jsonify({'success': False, 'message': 'Code expired. Please request a new scan.'}), 400
 
-    # Scrape the website to find the code
     try:
         url = website_url if website_url.startswith(('http://', 'https://')) else 'http://' + website_url
         resp = requests.get(url, timeout=10, headers={'User-Agent': 'Nexus-Verifier/1.0'})
         if resp.status_code != 200:
             return jsonify({'success': False, 'message': 'Could not reach website'}), 400
         if verification.code in resp.text:
-            # Code found – create scan job immediately
+            # Code found – create scan job (status = pending)
             verification.verified = True
             fd = verification.form_data
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
@@ -466,14 +462,8 @@ def verify_code():
             )
             db.session.add(job)
             db.session.commit()
-            # Optional: send confirmation email to user
-            try:
-                msg = Message('Scan started – Nexus Security', recipients=[fd['user_email']])
-                msg.body = f"Your scan for {fd['website_url']} ({fd['plan']} plan) has been confirmed and will start shortly."
-                mail.send(msg)
-            except:
-                pass
-            return jsonify({'success': True, 'message': 'Website verified! Scan started. You will receive the report on your profile.'})
+            # NO EMAIL SENT HERE
+            return jsonify({'success': True, 'message': '✅ Verification successful! You can now start the scan.', 'job_id': job.id})
         else:
             return jsonify({'success': False, 'message': f'Code "{verification.code}" not found on your website. Make sure you added it to the HTML source (e.g., as a hidden div or meta tag).'}), 400
     except Exception as e:

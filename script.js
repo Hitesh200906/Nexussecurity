@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateAuthButton();
 
-    // ---------- Login / Signup (unchanged, uses same showMessage) ----------
+    // ---------- Login / Signup (unchanged) ----------
     const loginTab = document.getElementById('loginTab');
     const signupTab = document.getElementById('signupTab');
     const loginFormDiv = document.getElementById('loginForm');
@@ -180,8 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 startBtn.disabled = true;
                 startBtn.textContent = 'Select verification method first';
             }
+            // Also remove any extra "start scan now" button if present
+            const existingStartNow = targetSection.querySelector('.start-scan-now-btn');
+            if (existingStartNow) existingStartNow.remove();
             delete form?.dataset.verificationId;
             delete form?.dataset.websiteUrl;
+            delete form?.dataset.jobId;
         }
     };
 
@@ -237,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Start Scan button click
+        // Start Scan button click (first step: generate code or send email)
         startBtn.addEventListener('click', async () => {
             if (startBtn.disabled) return;
 
@@ -336,17 +340,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await res.json();
                     if (data.success) {
                         showMessage(data.message);
-                        if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ Verified! Redirecting to profile...</span>';
-                        setTimeout(() => {
-                            window.location.href = '/profile';
-                        }, 2000);
+                        if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ ' + data.message + '</span>';
+                        // Hide the manual panel
+                        manualPanel.style.display = 'none';
+                        // Store the job ID for later
+                        form.dataset.jobId = data.job_id;
+                        // Create a new "Start Scan Now" button
+                        const existingStartNow = form.parentElement?.querySelector('.start-scan-now-btn');
+                        if (existingStartNow) existingStartNow.remove();
+                        const startNowBtn = document.createElement('button');
+                        startNowBtn.className = 'btn-53 start-scan-now-btn';
+                        startNowBtn.textContent = '🚀 Start Scan Now';
+                        startNowBtn.style.marginTop = '1rem';
+                        startNowBtn.style.background = '#2f9b9b';
+                        startNowBtn.onclick = async () => {
+                            startNowBtn.disabled = true;
+                            startNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+                            // The scan job is already pending, so we just inform the user and redirect
+                            showMessage('Scan started! You will receive the report on your profile page.');
+                            setTimeout(() => {
+                                window.location.href = '/profile';
+                            }, 2000);
+                        };
+                        form.parentElement?.appendChild(startNowBtn);
                     } else {
                         showMessage(data.message, true);
                         verifyBtn.disabled = false;
                         verifyBtn.innerHTML = 'Verify Code';
                     }
                 } catch (err) {
-                    showMessage('Verification failed', true);
+                    showMessage('Verification failed: ' + err.message, true);
                     verifyBtn.disabled = false;
                     verifyBtn.innerHTML = 'Verify Code';
                 }
