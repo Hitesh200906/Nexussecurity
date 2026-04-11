@@ -39,7 +39,7 @@ app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME'))
 
 print("📧 Email config loaded:")
 print(f"  MAIL_SERVER: {app.config['MAIL_SERVER']}")
@@ -198,8 +198,8 @@ th {{ background: #1a1a2a; }}
 <p><strong>Plan:</strong> {job.plan_type.upper()}</p>
 <p><strong>Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
 <h2>Vulnerabilities Found ({len(vulns)})</h2>
-<table>
-<tr><th>Name</th><th>Severity</th><th>Description</th></tr>
+<tr>
+<th>Name</th><th>Severity</th><th>Description</th>
 """
     for v in vulns:
         severity_class = v['severity'].lower()
@@ -216,17 +216,31 @@ th {{ background: #1a1a2a; }}
     job.status = 'completed'
     job.completed_at = datetime.utcnow()
     db.session.commit()
+    # Remove job from session to free memory
+    db.session.expunge(job)
 
-# ✅ FIXED: background worker runs inside app context
+# ✅ OPTIMISED background worker – processes one job at a time, clears session
 def background_worker():
     with app.app_context():
         while True:
-            pending_jobs = ScanJob.query.filter_by(status='pending').all()
-            for job in pending_jobs:
-                time.sleep(5)
-                generate_report_for_job(job.id)
+            try:
+                # Get the oldest pending job (FIFO)
+                job = ScanJob.query.filter_by(status='pending').order_by(ScanJob.created_at).first()
+                if job:
+                    generate_report_for_job(job.id)
+                    # Expunge all objects from session to free memory
+                    db.session.expunge_all()
+                else:
+                    time.sleep(5)
+                db.session.commit()
+                db.session.remove()  # close session
+            except Exception as e:
+                print(f"Background worker error: {e}")
+                db.session.rollback()
+                db.session.remove()
             time.sleep(10)
 
+# Start background thread only once
 if not hasattr(app, 'scanner_started'):
     thread = threading.Thread(target=background_worker, daemon=True)
     thread.start()
