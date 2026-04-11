@@ -179,13 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (startBtn) {
                 startBtn.disabled = true;
                 startBtn.textContent = 'Select verification method first';
+                startBtn.style.display = 'block';
             }
-            // Also remove any extra "start scan now" button if present
+            // Remove any extra "start scan now" button if present
             const existingStartNow = targetSection.querySelector('.start-scan-now-btn');
             if (existingStartNow) existingStartNow.remove();
             delete form?.dataset.verificationId;
             delete form?.dataset.websiteUrl;
             delete form?.dataset.jobId;
+            delete form?.dataset.verified;
         }
     };
 
@@ -217,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- SCAN FORM HANDLER (Professional dual verification) ----------
+    // ---------- SCAN FORM HANDLER ----------
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
         const methodRadios = form.querySelectorAll('input[name="emailOnSite"]');
@@ -234,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (radio.checked) {
                     startBtn.disabled = false;
                     startBtn.textContent = 'Start Scan';
+                    startBtn.style.display = 'block';
                     if (radio.value === 'yes' && manualPanel) {
                         manualPanel.style.display = 'none';
                     }
@@ -244,6 +247,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Start Scan button click (first step: generate code or send email)
         startBtn.addEventListener('click', async () => {
             if (startBtn.disabled) return;
+
+            // If this form has already been verified (manual code flow), then this click means "start the scan"
+            if (form.dataset.verified === 'true') {
+                // Just show a message and do nothing else (scan already pending)
+                showMessage('Scan started! You will receive the report on your profile page.');
+                // Optionally disable the button to prevent multiple clicks
+                startBtn.disabled = true;
+                startBtn.textContent = 'Scan Started';
+                return;
+            }
 
             const selectedRadio = form.querySelector('input[name="emailOnSite"]:checked');
             if (!selectedRadio) {
@@ -339,30 +352,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const data = await res.json();
                     if (data.success) {
-                        showMessage(data.message);
+                        // Show popup message: "you can now scan your website by simply pressing the Start Scan button"
+                        showMessage('✅ Verification successful! You can now scan your website by simply pressing the Start Scan button.');
                         if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ ' + data.message + '</span>';
                         // Hide the manual panel
                         manualPanel.style.display = 'none';
-                        // Store the job ID for later
-                        form.dataset.jobId = data.job_id;
-                        // Create a new "Start Scan Now" button
+                        // Re-enable the original start button, change its text and mark form as verified
+                        startBtn.disabled = false;
+                        startBtn.textContent = 'Start Scan';
+                        startBtn.style.display = 'block';
+                        form.dataset.verified = 'true';   // mark so next click just shows message
+                        // Remove any "Start Scan Now" button if accidentally present
                         const existingStartNow = form.parentElement?.querySelector('.start-scan-now-btn');
                         if (existingStartNow) existingStartNow.remove();
-                        const startNowBtn = document.createElement('button');
-                        startNowBtn.className = 'btn-53 start-scan-now-btn';
-                        startNowBtn.textContent = '🚀 Start Scan Now';
-                        startNowBtn.style.marginTop = '1rem';
-                        startNowBtn.style.background = '#2f9b9b';
-                        startNowBtn.onclick = async () => {
-                            startNowBtn.disabled = true;
-                            startNowBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
-                            // The scan job is already pending, so we just inform the user and redirect
-                            showMessage('Scan started! You will receive the report on your profile page.');
-                            setTimeout(() => {
-                                window.location.href = '/profile';
-                            }, 2000);
-                        };
-                        form.parentElement?.appendChild(startNowBtn);
                     } else {
                         showMessage(data.message, true);
                         verifyBtn.disabled = false;
