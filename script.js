@@ -1,11 +1,22 @@
-// script.js – shared across all pages
+// script.js – Nexus Security (Professional Dual Verification)
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof fetch === 'undefined') {
         console.error('fetch() is not supported. Please update your browser.');
         return;
     }
 
-    // Update auth button in navbar
+    // ---------- Helper: show message ----------
+    function showMessage(message, isError = false) {
+        const box = document.getElementById('messageBox');
+        if (!box) return;
+        const text = document.getElementById('messageText');
+        text.textContent = message;
+        box.style.display = 'flex';
+        box.style.borderLeftColor = isError ? '#ef4444' : '#2f9b9b';
+        setTimeout(() => { box.style.display = 'none'; }, 5000);
+    }
+
+    // ---------- Update auth button ----------
     async function updateAuthButton() {
         const container = document.getElementById('authButtonContainer');
         if (!container) return;
@@ -24,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateAuthButton();
 
-    // ========== LOGIN PAGE LOGIC ==========
+    // ---------- Login / Signup (unchanged, uses same showMessage) ----------
     const loginTab = document.getElementById('loginTab');
     const signupTab = document.getElementById('signupTab');
     const loginFormDiv = document.getElementById('loginForm');
@@ -52,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         signupTab.addEventListener('click', () => setActiveTab('signup'));
     }
 
-    // ----- LOGIN HANDLER -----
     if (doLogin) {
         doLogin.addEventListener('click', async () => {
             const email = document.getElementById('loginEmail').value.trim();
@@ -81,8 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     showMessage(data.message || 'Login failed. Please try again.', true);
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
-                    if (data.message && data.message.includes('No account found')) {
-                        if (signupTab) signupTab.click();
+                    if (data.message && data.message.includes('No account found') && signupTab) {
+                        signupTab.click();
                     }
                 }
             } catch (error) {
@@ -94,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ----- SIGNUP HANDLER -----
     if (doSignup) {
         doSignup.addEventListener('click', async () => {
             const name = document.getElementById('signupName').value.trim();
@@ -139,12 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Google login
     const handleGoogle = () => { window.location.href = '/login'; };
     if (googleLogin) googleLogin.addEventListener('click', handleGoogle);
     if (googleSignup) googleSignup.addEventListener('click', handleGoogle);
 
-    // ========== PLAN SELECTION ==========
+    // ---------- Plan selection ----------
     const planBtns = document.querySelectorAll('.plan-select-btn');
     const planSections = {
         basic: document.getElementById('urlSectionBasic'),
@@ -162,13 +170,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetSection) {
             targetSection.style.display = 'block';
             targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            const form = targetSection.querySelector('form');
+            const form = targetSection.querySelector('.scan-form');
             if (form) form.reset();
-            // Hide any open manual panels
-            const panels = targetSection.querySelectorAll('.manualVerificationPanel');
-            panels.forEach(panel => panel.style.display = 'none');
-            const submitBtn = targetSection.querySelector('.submitScanBtn');
-            if (submitBtn) submitBtn.style.display = 'block';
+            // Reset UI elements
+            const manualPanel = targetSection.querySelector('.manual-code-panel');
+            if (manualPanel) manualPanel.style.display = 'none';
+            const startBtn = targetSection.querySelector('.start-scan-btn');
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.textContent = 'Select verification method first';
+            }
+            delete form?.dataset.verificationId;
+            delete form?.dataset.websiteUrl;
         }
     };
 
@@ -192,35 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ========== MODAL & MESSAGE BOX ==========
-    function askQuestion(question) {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('questionModal');
-            const questionText = document.getElementById('questionText');
-            const yesBtn = document.getElementById('modalYes');
-            const noBtn = document.getElementById('modalNo');
-            questionText.textContent = question;
-            modal.style.display = 'flex';
-            const onYes = () => { modal.style.display = 'none'; cleanup(); resolve(true); };
-            const onNo = () => { modal.style.display = 'none'; cleanup(); resolve(false); };
-            const cleanup = () => {
-                yesBtn.removeEventListener('click', onYes);
-                noBtn.removeEventListener('click', onNo);
-            };
-            yesBtn.addEventListener('click', onYes);
-            noBtn.addEventListener('click', onNo);
-        });
-    }
-
-    function showMessage(message, isError = false) {
-        const box = document.getElementById('messageBox');
-        const text = document.getElementById('messageText');
-        text.textContent = message;
-        box.style.display = 'flex';
-        box.style.borderLeftColor = isError ? '#ef4444' : '#2f9b9b';
-        setTimeout(() => { box.style.display = 'none'; }, 5000);
-    }
-
+    // ---------- Close message button ----------
     const closeMsgBtn = document.getElementById('closeMessage');
     if (closeMsgBtn) {
         closeMsgBtn.addEventListener('click', () => {
@@ -228,137 +213,150 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ========== SCAN FORM HANDLER (DUAL VERIFICATION) ==========
+    // ---------- SCAN FORM HANDLER (Professional dual verification) ----------
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
-        // Toggle manual panel visibility based on radio selection? Not needed – we show after submission.
-        // But we need to attach the submit handler.
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        const methodRadios = form.querySelectorAll('input[name="emailOnSite"]');
+        const startBtn = form.querySelector('.start-scan-btn');
+        const manualPanel = form.querySelector('.manual-code-panel');
+        const verifyBtn = form.querySelector('.verify-code-btn');
+        const copyBtn = form.querySelector('.copy-code-btn');
+        const codeSpan = form.querySelector('.verification-code');
+        const verifyStatusDiv = form.querySelector('.verify-status');
 
-            const planInput = form.querySelector('input[name="plan"]');
-            const plan = planInput ? planInput.value : selectedPlan;
+        // Enable start button when a verification method is selected
+        methodRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'Start Scan';
+                    if (radio.value === 'yes' && manualPanel) {
+                        manualPanel.style.display = 'none';
+                    }
+                }
+            });
+        });
 
-            const fullName = form.querySelector('input[name="fullName"]')?.value.trim();
-            const role = form.querySelector('input[name="role"]')?.value.trim();
-            const companyName = form.querySelector('input[name="companyName"]')?.value.trim();
-            const userEmail = form.querySelector('input[name="userEmail"]')?.value.trim();
-            const websiteUrl = form.querySelector('input[name="websiteUrl"]')?.value.trim();
-            const businessEmail = form.querySelector('input[name="businessEmail"]')?.value.trim();
-            const emailOnSite = form.querySelector('input[name="emailOnSite"]:checked')?.value;
+        // Start Scan button click
+        startBtn.addEventListener('click', async () => {
+            if (startBtn.disabled) return;
 
-            if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail || !emailOnSite) {
-                showMessage('Please fill in all fields.', true);
+            const selectedRadio = form.querySelector('input[name="emailOnSite"]:checked');
+            if (!selectedRadio) {
+                showMessage('Please choose a verification method.', true);
                 return;
             }
+            const emailOnSite = selectedRadio.value;
 
+            // Gather form data
+            const fullName = form.querySelector('[name="fullName"]').value.trim();
+            const role = form.querySelector('[name="role"]').value.trim();
+            const companyName = form.querySelector('[name="companyName"]').value.trim();
+            const userEmail = form.querySelector('[name="userEmail"]').value.trim();
+            const websiteUrl = form.querySelector('[name="websiteUrl"]').value.trim();
+            const businessEmail = form.querySelector('[name="businessEmail"]').value.trim();
+            const plan = form.getAttribute('data-plan') || selectedPlan;
+
+            if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail) {
+                showMessage('Please fill all fields.', true);
+                return;
+            }
             try { new URL(websiteUrl); } catch (_) {
-                showMessage('Please enter a valid website URL (e.g., https://example.com).', true);
-                return;
-            }
-            if (!userEmail.includes('@') || !businessEmail.includes('@')) {
-                showMessage('Please enter valid email addresses.', true);
+                showMessage('Invalid website URL.', true);
                 return;
             }
 
-            const submitBtn = form.querySelector('.submitScanBtn');
-            const originalHTML = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            submitBtn.disabled = true;
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const formData = new FormData();
+            formData.append('fullName', fullName);
+            formData.append('role', role);
+            formData.append('companyName', companyName);
+            formData.append('userEmail', userEmail);
+            formData.append('websiteUrl', websiteUrl);
+            formData.append('businessEmail', businessEmail);
+            formData.append('plan', plan);
+            formData.append('emailOnSite', emailOnSite);
 
             try {
-                const formData = new FormData();
-                formData.append('fullName', fullName);
-                formData.append('role', role);
-                formData.append('companyName', companyName);
-                formData.append('userEmail', userEmail);
-                formData.append('websiteUrl', websiteUrl);
-                formData.append('businessEmail', businessEmail);
-                formData.append('plan', plan);
-                formData.append('emailOnSite', emailOnSite);
-
                 const response = await fetch('/api/request_scan', {
                     method: 'POST',
                     body: formData
                 });
                 const data = await response.json();
 
-                if (data.success) {
-                    if (emailOnSite === 'yes') {
-                        // Email flow
-                        showMessage(data.message);
-                        const parentSection = form.closest('.plan-url-section');
-                        if (parentSection) parentSection.style.display = 'none';
-                        form.reset();
-                    } else {
-                        // Manual code flow
-                        showMessage('Verification code generated! Please add it to your website and click Verify.');
-                        const manualPanel = form.querySelector('.manualVerificationPanel');
-                        const codeSpan = manualPanel.querySelector('.verificationCode');
-                        codeSpan.textContent = data.code;
-                        manualPanel.style.display = 'block';
-                        submitBtn.style.display = 'none';
-                        // Store verification data on the form
-                        form.dataset.verificationId = data.token;
-                        form.dataset.websiteUrl = websiteUrl;
-                    }
-                } else {
-                    showMessage(data.message || 'Submission failed.', true);
-                    submitBtn.innerHTML = originalHTML;
-                    submitBtn.disabled = false;
+                if (!data.success) {
+                    showMessage(data.message || 'Request failed', true);
+                    startBtn.disabled = false;
+                    startBtn.innerHTML = 'Start Scan';
+                    return;
                 }
-            } catch (error) {
-                console.error('Submission error:', error);
-                showMessage('An error occurred. Please try again later.', true);
-                submitBtn.innerHTML = originalHTML;
-                submitBtn.disabled = false;
+
+                if (emailOnSite === 'yes') {
+                    // Email flow: show message and hide the section
+                    showMessage(data.message);
+                    const parentSection = form.closest('.plan-url-section');
+                    if (parentSection) parentSection.style.display = 'none';
+                } else {
+                    // Manual code flow
+                    showMessage('Verification code generated! Copy and paste it on your website.');
+                    if (codeSpan) codeSpan.textContent = data.code;
+                    if (manualPanel) manualPanel.style.display = 'block';
+                    form.dataset.verificationId = data.token;
+                    form.dataset.websiteUrl = websiteUrl;
+                    startBtn.disabled = true;
+                    startBtn.textContent = 'Waiting for code verification...';
+                }
+            } catch (err) {
+                console.error(err);
+                showMessage('Network error', true);
+                startBtn.disabled = false;
+                startBtn.innerHTML = 'Start Scan';
             }
         });
 
-        // Attach verify button handler
-        const verifyBtn = form.querySelector('.verifyCodeBtn');
+        // Verify Code button (manual path)
         if (verifyBtn) {
             verifyBtn.addEventListener('click', async () => {
                 const verificationId = form.dataset.verificationId;
                 const websiteUrl = form.dataset.websiteUrl;
                 if (!verificationId || !websiteUrl) {
-                    showMessage('Missing verification data. Please submit the form again.', true);
+                    showMessage('Missing verification data. Please start again.', true);
                     return;
                 }
-                verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
                 verifyBtn.disabled = true;
+                verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
                 try {
-                    const response = await fetch('/api/verify_code', {
+                    const res = await fetch('/api/verify_code', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ verification_id: verificationId, website_url: websiteUrl })
                     });
-                    const data = await response.json();
+                    const data = await res.json();
                     if (data.success) {
                         showMessage(data.message);
+                        if (verifyStatusDiv) verifyStatusDiv.innerHTML = '<span style="color:#2f9b9b;">✓ Verified! Redirecting to profile...</span>';
                         setTimeout(() => {
                             window.location.href = '/profile';
                         }, 2000);
                     } else {
                         showMessage(data.message, true);
-                        verifyBtn.innerHTML = 'Verify Code';
                         verifyBtn.disabled = false;
+                        verifyBtn.innerHTML = 'Verify Code';
                     }
                 } catch (err) {
-                    showMessage('Network error during verification.', true);
-                    verifyBtn.innerHTML = 'Verify Code';
+                    showMessage('Verification failed', true);
                     verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = 'Verify Code';
                 }
             });
         }
 
         // Copy code button
-        const copyBtn = form.querySelector('.copyCodeBtn');
-        if (copyBtn) {
+        if (copyBtn && codeSpan) {
             copyBtn.addEventListener('click', () => {
-                const codeSpan = form.querySelector('.verificationCode');
-                const code = codeSpan.textContent;
-                navigator.clipboard.writeText(code);
+                navigator.clipboard.writeText(codeSpan.textContent);
                 showMessage('Code copied to clipboard!');
             });
         }

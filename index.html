@@ -152,19 +152,19 @@
         </div>
     </section>
 
-    <!-- Basic Scan Section -->
+    <!-- Basic Scan Form -->
     <div id="urlSectionBasic" class="url-section plan-url-section" style="display: none;" data-plan="basic">
         <div class="url-container">
             <h3>Basic Scan Details</h3>
-            <p>We'll verify ownership and start the scan after confirmation.</p>
-            <form class="scan-form">
+            <p>Fill in your details and choose how to verify ownership.</p>
+            <form class="scan-form" data-plan="basic">
                 <input type="hidden" name="plan" value="basic">
                 <div class="form-group">
                     <input type="text" name="fullName" placeholder="Your Full Name" required>
                     <i class="fas fa-user input-icon"></i>
                 </div>
                 <div class="form-group">
-                    <input type="text" name="role" placeholder="Your Role in Company (e.g., CEO, Developer)" required>
+                    <input type="text" name="role" placeholder="Your Role in Company" required>
                     <i class="fas fa-briefcase input-icon"></i>
                 </div>
                 <div class="form-group">
@@ -184,49 +184,52 @@
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
 
-                <!-- TWO VERIFICATION OPTIONS -->
-                <div class="form-group">
-                    <label>How do you want to verify ownership?</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                <!-- Verification Methods Cards -->
+                <div class="verification-methods">
+                    <div class="method-card" data-method="email">
+                        <input type="radio" name="emailOnSite" value="yes" id="methodEmailBasic" required>
+                        <label for="methodEmailBasic">
+                            <i class="fas fa-envelope"></i>
+                            <strong>Email Verification</strong>
+                            <span>We'll send a confirmation link to the business email.</span>
+                        </label>
                     </div>
-                    <div class="radio-group" style="margin-top: 0.5rem;">
-                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
+                    <div class="method-card" data-method="code">
+                        <input type="radio" name="emailOnSite" value="no" id="methodCodeBasic" required>
+                        <label for="methodCodeBasic">
+                            <i class="fas fa-code"></i>
+                            <strong>Manual Code Verification</strong>
+                            <span>Generate a 6‑character code, paste it on your website, then verify.</span>
+                        </label>
                     </div>
                 </div>
 
-                <!-- Manual verification panel (hidden initially) -->
-                <div id="manualVerificationPanel" style="display: none;">
-                    <div class="verification-code-box">
-                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                <!-- Manual Code Panel (hidden initially) -->
+                <div class="manual-code-panel" style="display: none;">
+                    <div class="code-card">
+                        <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
                         <div class="code-display">
-                            <span id="verificationCode">------</span>
-                            <button type="button" class="copyCodeBtn" class="btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                            <span class="verification-code">------</span>
+                            <button type="button" class="copy-code-btn btn-copy"><i class="fas fa-copy"></i> Copy</button>
                         </div>
-                        <p class="instruction">
-                            📌 <strong>Instructions:</strong><br>
-                            1. Copy the code above.<br>
-                            2. Paste it anywhere on your website (e.g., inside a hidden `<div>`, a meta tag, or the footer).<br>
-                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
-                            4. Once verified, your scan will start immediately.
-                        </p>
-                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
-                        <div class="verifyStatus" style="margin-top: 1rem;"></div>
+                        <p class="instruction">📌 Paste this code anywhere on your website (footer, meta tag, hidden div). Then click <strong>Verify Code</strong>.</p>
+                        <button type="button" class="verify-code-btn btn-53" style="background:#2f9b9b;">Verify Code</button>
+                        <div class="verify-status"></div>
                     </div>
                 </div>
 
-                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
+                <!-- Main Start Scan Button (disabled until method selected) -->
+                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
-            <p class="url-note">* We'll send a confirmation email to the business email if you choose that option.</p>
         </div>
     </div>
 
-    <!-- Advanced Scan Section (same structure, plan=advanced) -->
+    <!-- Advanced Scan Form -->
     <div id="urlSectionAdvanced" class="url-section plan-url-section" style="display: none;" data-plan="advanced">
         <div class="url-container">
             <h3>Advanced Scan Details</h3>
-            <p>Advanced plan includes full website crawl and detailed remediation guide.</p>
-            <form class="scan-form">
+            <p>Full website crawl with detailed remediation guide.</p>
+            <form class="scan-form" data-plan="advanced">
                 <input type="hidden" name="plan" value="advanced">
                 <div class="form-group">
                     <input type="text" name="fullName" placeholder="Your Full Name" required>
@@ -253,47 +256,49 @@
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
 
-                <div class="form-group">
-                    <label>How do you want to verify ownership?</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                <div class="verification-methods">
+                    <div class="method-card" data-method="email">
+                        <input type="radio" name="emailOnSite" value="yes" id="methodEmailAdvanced" required>
+                        <label for="methodEmailAdvanced">
+                            <i class="fas fa-envelope"></i>
+                            <strong>Email Verification</strong>
+                            <span>We'll send a confirmation link to the business email.</span>
+                        </label>
                     </div>
-                    <div class="radio-group" style="margin-top: 0.5rem;">
-                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
+                    <div class="method-card" data-method="code">
+                        <input type="radio" name="emailOnSite" value="no" id="methodCodeAdvanced" required>
+                        <label for="methodCodeAdvanced">
+                            <i class="fas fa-code"></i>
+                            <strong>Manual Code Verification</strong>
+                            <span>Generate a 6‑character code, paste it on your website, then verify.</span>
+                        </label>
                     </div>
                 </div>
 
-                <div class="manualVerificationPanel" style="display: none;">
-                    <div class="verification-code-box">
-                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                <div class="manual-code-panel" style="display: none;">
+                    <div class="code-card">
+                        <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
                         <div class="code-display">
-                            <span class="verificationCode">------</span>
-                            <button type="button" class="copyCodeBtn btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                            <span class="verification-code">------</span>
+                            <button type="button" class="copy-code-btn btn-copy"><i class="fas fa-copy"></i> Copy</button>
                         </div>
-                        <p class="instruction">
-                            📌 <strong>Instructions:</strong><br>
-                            1. Copy the code above.<br>
-                            2. Paste it anywhere on your website.<br>
-                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
-                            4. Once verified, your scan will start immediately.
-                        </p>
-                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
-                        <div class="verifyStatus"></div>
+                        <p class="instruction">📌 Paste this code anywhere on your website. Then click <strong>Verify Code</strong>.</p>
+                        <button type="button" class="verify-code-btn btn-53" style="background:#2f9b9b;">Verify Code</button>
+                        <div class="verify-status"></div>
                     </div>
                 </div>
 
-                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
+                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
-            <p class="url-note">* We'll verify your business email and start the scan within minutes.</p>
         </div>
     </div>
 
-    <!-- Protection+ Scan Section (same structure, plan=protection_plus) -->
+    <!-- Protection+ Scan Form -->
     <div id="urlSectionProtection" class="url-section plan-url-section" style="display: none;" data-plan="protection_plus">
         <div class="url-container">
             <h3>Protection+ Scan Details</h3>
-            <p>Enterprise‑grade deep scan with compliance mapping and critical vulnerability detection.</p>
-            <form class="scan-form">
+            <p>Enterprise‑grade deep scan with compliance mapping.</p>
+            <form class="scan-form" data-plan="protection_plus">
                 <input type="hidden" name="plan" value="protection_plus">
                 <div class="form-group">
                     <input type="text" name="fullName" placeholder="Your Full Name" required>
@@ -320,38 +325,40 @@
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
 
-                <div class="form-group">
-                    <label>How do you want to verify ownership?</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="emailOnSite" value="yes" required> ✅ Yes, business email is on my website (we'll send a verification email)</label>
+                <div class="verification-methods">
+                    <div class="method-card" data-method="email">
+                        <input type="radio" name="emailOnSite" value="yes" id="methodEmailProtection" required>
+                        <label for="methodEmailProtection">
+                            <i class="fas fa-envelope"></i>
+                            <strong>Email Verification</strong>
+                            <span>We'll send a confirmation link to the business email.</span>
+                        </label>
                     </div>
-                    <div class="radio-group" style="margin-top: 0.5rem;">
-                        <label><input type="radio" name="emailOnSite" value="no" required> 🔐 No, I want to verify manually using a code (paste on website)</label>
+                    <div class="method-card" data-method="code">
+                        <input type="radio" name="emailOnSite" value="no" id="methodCodeProtection" required>
+                        <label for="methodCodeProtection">
+                            <i class="fas fa-code"></i>
+                            <strong>Manual Code Verification</strong>
+                            <span>Generate a 6‑character code, paste it on your website, then verify.</span>
+                        </label>
                     </div>
                 </div>
 
-                <div class="manualVerificationPanel" style="display: none;">
-                    <div class="verification-code-box">
-                        <p><i class="fas fa-shield-alt"></i> <strong>Manual Verification Code</strong></p>
+                <div class="manual-code-panel" style="display: none;">
+                    <div class="code-card">
+                        <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
                         <div class="code-display">
-                            <span class="verificationCode">------</span>
-                            <button type="button" class="copyCodeBtn btn-copy"><i class="fas fa-copy"></i> Copy</button>
+                            <span class="verification-code">------</span>
+                            <button type="button" class="copy-code-btn btn-copy"><i class="fas fa-copy"></i> Copy</button>
                         </div>
-                        <p class="instruction">
-                            📌 <strong>Instructions:</strong><br>
-                            1. Copy the code above.<br>
-                            2. Paste it anywhere on your website.<br>
-                            3. Click <strong>"Verify Code"</strong> below – our AI will scan your website to confirm.<br>
-                            4. Once verified, your scan will start immediately.
-                        </p>
-                        <button type="button" class="verifyCodeBtn btn-53" style="background: #2f9b9b;">Verify Code</button>
-                        <div class="verifyStatus"></div>
+                        <p class="instruction">📌 Paste this code anywhere on your website. Then click <strong>Verify Code</strong>.</p>
+                        <button type="button" class="verify-code-btn btn-53" style="background:#2f9b9b;">Verify Code</button>
+                        <div class="verify-status"></div>
                     </div>
                 </div>
 
-                <button type="submit" class="submitScanBtn btn-53">REQUEST SCAN</button>
+                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
-            <p class="url-note">* Strict ownership verification and confirmation email required.</p>
         </div>
     </div>
 
@@ -399,7 +406,7 @@
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
 
-    <!-- Modal -->
+    <!-- Modal (for any confirmations) -->
     <div id="questionModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h3>Website Verification</h3>
