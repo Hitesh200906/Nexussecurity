@@ -10,16 +10,17 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from authlib.integrations.flask_client import OAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from supabase import create_client, Client
 
 load_dotenv()
 
 app = Flask(__name__, template_folder='.')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-change-this')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 database_url = os.getenv('DATABASE_URL')
 if database_url:
@@ -32,45 +33,26 @@ app.config['UPLOAD_FOLDER'] = 'reports'
 app.config['SCAN_TIMEOUT'] = 60
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Brevo API config (no SMTP)
-BREVO_API_KEY = os.getenv('BREVO_API_KEY')
-BREVO_SENDER_EMAIL = os.getenv('MAIL_DEFAULT_SENDER', 'nexussecurity777@gmail.com')
+# ---------- Supabase Client ----------
+supabase_url = os.getenv('SUPABASE_URL')
+supabase_anon_key = os.getenv('SUPABASE_KEY')
+supabase_service_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+supabase: Client = create_client(supabase_url, supabase_anon_key)
+supabase_admin: Client = create_client(supabase_url, supabase_service_key)
 
+# ---------- Database ----------
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-oauth = OAuth(app)
-
-# Google OAuth (optional)
-google = None
-if os.getenv('GOOGLE_CLIENT_ID') and os.getenv('GOOGLE_CLIENT_SECRET'):
-    google = oauth.register(
-        name='google',
-        client_id=os.getenv('GOOGLE_CLIENT_ID'),
-        client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={'scope': 'openid email profile'},
-    )
-
-def generate_verification_code():
-    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
-    return ''.join(random.choices(chars, k=6))
 
 # ---------- Database Models ----------
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
-    google_id = db.Column(db.String(100), unique=True)
-    password_hash = db.Column(db.String(256), nullable=True)
+    supabase_user_id = db.Column(db.String(36), unique=True, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scans = db.relationship('ScanJob', backref='user', lazy=True)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
 
 class ScanJob(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -132,6 +114,118 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# ---------- Helper: get or create user from Supabase user ----------
+def get_or_create_user(supabase_user):
+    email = supabase_user['email']
+    name = supabase_user.get('user_metadata', {}).get('full_name', email.split('@')[0])
+    supabase_id = supabase_user['id']
+    user = User.query.filter_by(supabase_user_id=supabase_id).first()
+    if not user:
+        user = User(email=email, name=name, supabase_user_id=supabase_id)
+        db.session.add(user)
+        db.session.commit()
+    return user
+
+# ---------- Auth Routes (Supabase) ----------
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/login/google')
+def google_login():
+    redirect_url = url_for('auth_callback', _external=True)
+    response = supabase.auth.sign_in_with_oauth({
+        "provider": "google",
+        "options": {"redirect_to": redirect_url}
+    })
+    return redirect(response.url)
+
+@app.route('/auth/callback')
+def auth_callback():
+    code = request.args.get('code')
+    if not code:
+        flash('Authentication failed.', 'danger')
+        return redirect(url_for('login'))
+    try:
+        session_info = supabase.auth.exchange_code_for_session({'auth_code': code})
+        user = session_info.user
+        session['supabase_access_token'] = session_info.access_token
+        db_user = get_or_create_user(user.dict())
+        login_user(db_user)
+        return redirect(url_for('index'))
+    except Exception as e:
+        flash(f'Authentication error: {str(e)}', 'danger')
+        return redirect(url_for('login'))
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    try:
+        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        user = res.user
+        session['supabase_access_token'] = res.session.access_token
+        db_user = get_or_create_user(user.dict())
+        login_user(db_user)
+        return jsonify({'success': True, 'message': 'Logged in'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 401
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    try:
+        res = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {"data": {"full_name": name}}
+        })
+        user = res.user
+        if not user:
+            return jsonify({'success': False, 'message': 'Sign-up failed'}), 400
+        session['supabase_access_token'] = res.session.access_token if res.session else None
+        db_user = get_or_create_user(user.dict())
+        login_user(db_user)
+        return jsonify({'success': True, 'message': 'Registration successful'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+@app.route('/logout')
+@login_required
+def logout():
+    try:
+        supabase.auth.sign_out()
+    except:
+        pass
+    logout_user()
+    session.clear()
+    return redirect(url_for('index'))
+
+# ---------- Email sending using Brevo HTTP API (no SMTP) ----------
+def send_email_via_brevo(to_email, subject, body):
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        raise Exception("BREVO_API_KEY not set")
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    data = {
+        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": body
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error: {response.text}")
+
 # ---------- Simulated scanning ----------
 def generate_vulnerabilities(plan_type, url):
     vulns = []
@@ -190,7 +284,7 @@ th {{ background: #1a1a2a; }}
     for v in vulns:
         severity_class = v['severity'].lower()
         html += f"<tr><td>{v['name']}</td><td class='{severity_class}'>{v['severity']}</td><td>{v['description']}</td></tr>"
-    html += """</td>
+    html += """</table>
 <p>Remediation advice: Contact your developer to fix the issues listed above.</p>
 <p>Nexus Security Team</p>
 </body></html>"""
@@ -204,7 +298,6 @@ th {{ background: #1a1a2a; }}
     db.session.commit()
     db.session.expunge(job)
 
-# Optimised background worker
 def background_worker():
     with app.app_context():
         while True:
@@ -267,64 +360,11 @@ def profile():
 def favicon():
     return '', 204
 
-# ---------- Auth API ----------
-@app.route('/api/register', methods=['POST'])
-def api_register():
-    data = request.get_json()
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    if not name or not email or not password:
-        return jsonify({'success': False, 'message': 'Missing fields'}), 400
-    if User.query.filter_by(email=email).first():
-        return jsonify({'success': False, 'message': 'Email already exists'}), 400
-    user = User(email=email, name=name)
-    user.set_password(password)
-    db.session.add(user)
-    db.session.commit()
-    login_user(user)
-    return jsonify({'success': True, 'message': 'Registration successful'})
-
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify({'success': False, 'message': 'No account found with this email. Please sign up first.'}), 401
-    if user.check_password(password):
-        login_user(user)
-        return jsonify({'success': True, 'message': 'Logged in'})
-    else:
-        return jsonify({'success': False, 'message': 'Incorrect password. Please try again.'}), 401
-
 @app.route('/api/status')
 def api_status():
     if current_user.is_authenticated:
         return jsonify({'logged_in': True, 'name': current_user.name, 'email': current_user.email})
     return jsonify({'logged_in': False})
-
-# ---------- Brevo API email sender (replaces Flask-Mail) ----------
-def send_brevo_email(to_email, subject, content):
-    if not BREVO_API_KEY:
-        raise Exception("BREVO_API_KEY not set")
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json",
-    }
-    payload = {
-        "sender": {"name": "Nexus Security", "email": BREVO_SENDER_EMAIL},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": content,
-    }
-    response = requests.post(url, json=payload, headers=headers, timeout=15)
-    if response.status_code not in (200, 201):
-        raise Exception(f"Brevo API error: {response.status_code} - {response.text}")
-    return True
 
 # ---------- SCAN REQUEST: TWO PATHS ----------
 @app.route('/api/request_scan', methods=['POST'])
@@ -365,15 +405,8 @@ def request_scan():
                 db.session.commit()
                 try:
                     verify_url = url_for('verify_scan', token=token, _external=True)
-                    email_content = f"""
-                    <p>Hello,</p>
-                    <p>You requested a security scan for {website_url} ({plan} plan).</p>
-                    <p>Please click the link below to confirm your email and start the scan:</p>
-                    <p><a href="{verify_url}">Confirm Scan</a></p>
-                    <p>If you did not request this, please ignore this email.</p>
-                    <p>Nexus Security Team</p>
-                    """
-                    send_brevo_email(business_email, 'Verify your scan request for Nexus Security', email_content)
+                    email_body = f"Hello,<br><br>You requested a security scan for {website_url} ({plan} plan).<br>Please click the link below to confirm your email and start the scan:<br><br><a href='{verify_url}'>Confirm Scan</a><br><br>If you did not request this, please ignore this email.<br><br>Nexus Security Team"
+                    send_email_via_brevo(business_email, 'Verify your scan request for Nexus Security', email_body)
                     return jsonify({'success': True, 'message': f'Verification email sent to {business_email}'})
                 except Exception as mail_err:
                     db.session.rollback()
@@ -381,12 +414,8 @@ def request_scan():
                     return jsonify({'success': False, 'message': f'Failed to send email: {str(mail_err)}'}), 500
             else:
                 return jsonify({'success': False, 'message': f'Could not find {business_email} on {website_url}.'}), 400
-        except requests.exceptions.RequestException as e:
-            print(f"Request error: {e}")
-            return jsonify({'success': False, 'message': f'Could not reach website: {str(e)}'}), 400
         except Exception as e:
-            print(f"Unexpected error: {e}")
-            return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+            return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
     else:
         code = generate_verification_code()
         while WebsiteVerificationCode.query.filter_by(code=code).first():
@@ -435,7 +464,6 @@ def verify_scan(token):
     db.session.commit()
     pending.used = True
     db.session.commit()
-
     flash('Scan confirmed! We will start the scan shortly.', 'success')
     return redirect(url_for('profile'))
 
@@ -445,7 +473,6 @@ def verify_code():
     data = request.get_json()
     verification_id = data.get('verification_id')
     website_url = data.get('website_url')
-
     verification = WebsiteVerificationCode.query.get(verification_id)
     if not verification or verification.user_id != current_user.id:
         return jsonify({'success': False, 'message': 'Invalid verification session'}), 400
@@ -453,7 +480,6 @@ def verify_code():
         return jsonify({'success': False, 'message': 'Code already verified'}), 400
     if verification.expires_at < datetime.utcnow():
         return jsonify({'success': False, 'message': 'Code expired. Please request a new scan.'}), 400
-
     try:
         url = website_url if website_url.startswith(('http://', 'https://')) else 'http://' + website_url
         resp = requests.get(url, timeout=10, headers={'User-Agent': 'Nexus-Verifier/1.0'})
@@ -484,41 +510,6 @@ def verify_code():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
-# ---------- Google OAuth ----------
-@app.route('/login')
-def login():
-    if google is None:
-        flash('Google login is not configured. Please use email/password.', 'warning')
-        return redirect(url_for('login_html'))
-    redirect_uri = url_for('authorize', _external=True)
-    return google.authorize_redirect(redirect_uri)
-
-@app.route('/login/authorize')
-def authorize():
-    if google is None:
-        flash('Google login is not available.', 'danger')
-        return redirect(url_for('login_html'))
-    token = google.authorize_access_token()
-    resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo')
-    user_info = resp.json()
-    email = user_info['email']
-    name = user_info.get('name', email.split('@')[0])
-    google_id = user_info['sub']
-
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        user = User(email=email, name=name, google_id=google_id)
-        db.session.add(user)
-        db.session.commit()
-    login_user(user)
-    return redirect(url_for('index'))
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
-
 @app.route('/view_report/<int:job_id>')
 @login_required
 def view_report(job_id):
@@ -531,60 +522,10 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Legacy endpoints (keep for compatibility) ----------
-@app.route('/send_verification', methods=['POST'])
-@login_required
-def send_verification():
-    data = request.get_json()
-    email = data.get('email')
-    website = data.get('website')
-    plan = data.get('plan')
-    token = secrets.token_urlsafe(32)
-    verif = VerificationToken(email=email, website=website, plan=plan, token=token)
-    db.session.add(verif)
-    db.session.commit()
-    verify_url = url_for('verify_email', token=token, _external=True)
-    email_content = f"""
-    <p>Hello,</p>
-    <p>You requested a security scan for {website} ({plan} plan).</p>
-    <p>Please click the link below to confirm your email and start the scan:</p>
-    <p><a href="{verify_url}">Confirm Scan</a></p>
-    <p>If you did not request this, please ignore this email.</p>
-    <p>Nexus Security Team</p>
-    """
-    try:
-        send_brevo_email(email, 'Verify your email for Nexus Security scan', email_content)
-        return jsonify({'success': True, 'message': 'Verification email sent'})
-    except Exception as e:
-        print(f"Email sending failed: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/verify_email/<token>')
-def verify_email(token):
-    verif = VerificationToken.query.filter_by(token=token, used=False).first()
-    if not verif:
-        return "Invalid or expired verification link.", 400
-    verif.used = True
-    db.session.commit()
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head><title>Email Verified | Nexus Security</title>
-    <style>body{{font-family:Inter,Arial,sans-serif;text-align:center;padding:2rem;background:#000;color:#fff;}}
-    .container{{max-width:600px;margin:0 auto;background:#0a0a0f;padding:2rem;border-radius:1rem;border:1px solid #2f9b9b;}}
-    h1{{color:#2f9b9b;}} a{{display:inline-block;margin-top:1rem;padding:0.5rem 1rem;background:#2f9b9b;color:#fff;text-decoration:none;border-radius:4px;}}
-    </style></head>
-    <body><div class="container"><h1>✅ Email Verified!</h1>
-    <p>Your scan for <strong>{verif.website}</strong> ({verif.plan} plan) is now confirmed.</p>
-    <p>We will start the scan shortly and notify you at <strong>{verif.email}</strong>.</p>
-    <a href="/">Return to Homepage</a>
-    </div></body></html>
-    """
-
 @app.route('/test-email')
 def test_email():
     try:
-        send_brevo_email('hitesh.tanwar8318@gmail.com', 'Test from Nexus Security', '<p>This is a test email.</p>')
+        send_email_via_brevo('hitesh.tanwar8318@gmail.com', 'Test Email from Nexus Security', '<p>This is a test email from your Flask app using Brevo API.</p>')
         return '✅ Email sent successfully! Check your inbox.'
     except Exception as e:
         return f'❌ Error: {str(e)}'
