@@ -6,12 +6,13 @@ import random
 import uuid
 import secrets
 import string
-import requests
+import hashlib
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -72,7 +73,7 @@ class ScanJob(db.Model):
     user_email = db.Column(db.String(120))
     business_email = db.Column(db.String(120))
     verification_code = db.Column(db.String(10), nullable=True)
-    scan_id = db.Column(db.String(32), nullable=True)  # ID from scanner backend
+    scan_id = db.Column(db.String(32), nullable=True)  # ID from friend's scanner
 
 class VerificationToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -115,11 +116,6 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ---------- Helper: generate 6-character alphanumeric code ----------
-def generate_verification_code():
-    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
-    return ''.join(random.choices(chars, k=6))
-
 # ---------- Helper: get or create user from Supabase user ----------
 def get_or_create_user(supabase_user):
     email = supabase_user['email']
@@ -132,51 +128,10 @@ def get_or_create_user(supabase_user):
         db.session.commit()
     return user
 
-# ---------- Email sending using Brevo HTTP API ----------
-def send_email_via_brevo(to_email, subject, body):
-    api_key = os.getenv('BREVO_API_KEY')
-    if not api_key:
-        raise Exception("BREVO_API_KEY not set")
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "accept": "application/json",
-        "api-key": api_key,
-        "content-type": "application/json"
-    }
-    data = {
-        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": body
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code not in (200, 201):
-        raise Exception(f"Brevo API error: {response.text}")
-
-# ---------- Scanner backend integration ----------
-SCANNER_BACKEND_URL = os.getenv('SCANNER_BACKEND_URL', 'http://localhost:5002')
-
-def send_to_scanner_backend(scan_id, url, plan, user_email):
-    """Send scan request to scanner_backend.py"""
-    try:
-        response = requests.post(
-            f"{SCANNER_BACKEND_URL}/api/start-scan",
-            json={
-                'url': url,
-                'plan': plan,
-                'email': user_email,
-                'scan_id': scan_id
-            },
-            timeout=10
-        )
-        if response.status_code == 200:
-            return True
-        else:
-            print(f"Scanner backend error: {response.text}")
-            return False
-    except Exception as e:
-        print(f"Failed to contact scanner backend: {e}")
-        return False
+# ---------- Helper: generate 6-character alphanumeric code ----------
+def generate_verification_code():
+    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
+    return ''.join(random.choices(chars, k=6))
 
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
@@ -261,6 +216,55 @@ def logout():
     logout_user()
     session.clear()
     return redirect(url_for('index'))
+
+# ---------- Email sending using Brevo HTTP API ----------
+def send_email_via_brevo(to_email, subject, body):
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        raise Exception("BREVO_API_KEY not set")
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    data = {
+        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": body
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error: {response.text}")
+
+# ---------- Friend's AI Scanner Integration ----------
+JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://nexus-scanner-9w6p.onrender.com')
+CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
+
+def send_to_friend_scanner(scan_id, url, plan, user_email):
+    """Send scan request directly to friend's AI scanner."""
+    try:
+        response = requests.post(
+            f"{JATIN_API_URL}/api/scan/submit",
+            json={
+                'url': url,
+                'plan': plan,
+                'scan_id': scan_id,
+                'webhook_url': CALLBACK_URL
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Friend's scanner returns its own scan_id; we store it
+            return data.get('scan_id', scan_id)
+        else:
+            print(f"Scanner error: {response.text}")
+            return None
+    except Exception as e:
+        print(f"Failed to contact friend's scanner: {e}")
+        return None
 
 # ---------- Static Routes ----------
 @app.route('/style.css')
@@ -389,8 +393,7 @@ def verify_scan(token):
         return "Invalid or expired verification link.", 400
 
     prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
-    # Generate a unique scan ID for the scanner backend
-    import hashlib
+    # Generate a unique scan ID for our system
     scan_id = hashlib.md5(f"{pending.website_url}{pending.user_email}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
     job = ScanJob(
@@ -412,15 +415,16 @@ def verify_scan(token):
     pending.used = True
     db.session.commit()
 
-    # Send scan request to scanner backend
-    success = send_to_scanner_backend(scan_id, pending.website_url, pending.plan_type, pending.user_email)
-    if not success:
-        # If failed, update job status to 'failed'
+    # Send scan request to friend's AI scanner
+    remote_scan_id = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
+    if remote_scan_id:
+        # Optionally store remote_scan_id in a separate column or just log
+        print(f"Scan {scan_id} queued with friend's scanner as {remote_scan_id}")
+        flash('Scan confirmed! The AI scanner will process your request.', 'success')
+    else:
         job.status = 'failed'
         db.session.commit()
         flash('Scan request could not be sent. Please try again later.', 'danger')
-    else:
-        flash('Scan confirmed! The scan will start shortly.', 'success')
 
     return redirect(url_for('profile'))
 
@@ -446,7 +450,6 @@ def verify_code():
             verification.verified = True
             fd = verification.form_data
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
-            import hashlib
             scan_id = hashlib.md5(f"{fd['website_url']}{fd['user_email']}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
             job = ScanJob(
@@ -467,25 +470,25 @@ def verify_code():
             db.session.add(job)
             db.session.commit()
 
-            # Send to scanner backend
-            success = send_to_scanner_backend(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
-            if not success:
+            # Send to friend's scanner
+            remote_scan_id = send_to_friend_scanner(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
+            if remote_scan_id:
+                return jsonify({'success': True, 'message': '✅ Verification successful! Scan queued.', 'job_id': job.id})
+            else:
                 job.status = 'failed'
                 db.session.commit()
                 return jsonify({'success': False, 'message': 'Scan request failed. Please try again.'}), 500
-
-            return jsonify({'success': True, 'message': '✅ Verification successful! Scan queued.', 'job_id': job.id})
         else:
             return jsonify({'success': False, 'message': f'Code "{verification.code}" not found on your website. Make sure you added it to the HTML source.'}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
-# ---------- Callback from scanner backend ----------
+# ---------- Callback from Friend's Scanner ----------
 @app.route('/api/scan-callback', methods=['POST'])
 def scan_callback():
-    """Called by scanner_backend when a scan is completed."""
+    """Receives report URL from friend's AI scanner when scan is complete."""
     data = request.json
-    scan_id = data.get('scan_id')
+    scan_id = data.get('scan_id')       # our own scan_id (we sent it)
     report_url = data.get('report_url')
     status = data.get('status')
 
@@ -498,7 +501,7 @@ def scan_callback():
 
     if status == 'completed' and report_url:
         try:
-            # Download the HTML report from the provided URL
+            # Download the HTML report
             response = requests.get(report_url, timeout=30)
             if response.status_code == 200:
                 filename = f"report_{scan_id}.html"
@@ -537,7 +540,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Test email endpoint (optional) ----------
+# ---------- Test Email Endpoint (optional) ----------
 @app.route('/test-email')
 def test_email():
     try:
