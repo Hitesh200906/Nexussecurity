@@ -2305,3 +2305,31 @@ body::after {
     cursor: pointer;
     color: white;
 }
+
+
+
+
+
+
+
+/* Fix for all input icons – ensure parent is relative and icon centered */
+.form-group {
+    position: relative !important;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    transition: color 0.3s;
+}
+
+/* Additional tweak for login page specific inputs (already have left padding) */
+.auth-form .form-group input,
+.url-section .form-group input {
+    padding-left: 2.8rem; /* ensure enough space for icon */
+}
