@@ -7,14 +7,13 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
 
     <nav class="navbar">
-        <div class="logo">
-            <h1>NEXUS SECURITY</h1>
-        </div>
+        <div class="logo"><h1>NEXUS SECURITY</h1></div>
         <div class="nav-links">
             <a href="index.html">Home</a>
             <a href="index.html#plans">Plans</a>
@@ -29,27 +28,43 @@
                 <p><strong>Name:</strong> {{ user.name }}</p>
                 <p><strong>Email:</strong> {{ user.email }}</p>
             </div>
+
+            <!-- Credits Section -->
+            <div class="credits-card">
+                <div>
+                    <i class="fas fa-coins"></i> <strong>Your Credits</strong>
+                    <div class="credits-amount">{{ user.credits or 0 }} credits</div>
+                </div>
+                <div>
+                    <button class="buy-credits-btn" id="buyCreditsBtn"><i class="fas fa-shopping-cart"></i> Buy Credits</button>
+                </div>
+            </div>
+
+            <!-- Scan History -->
             <div class="scan-history">
                 <h3>Scan History</h3>
                 <div id="scanHistoryList">
                     {% if scans %}
                         {% for scan in scans %}
                             <div class="scan-item">
-                                {% if scan.photo_path %}
-                                    <img src="{{ url_for('uploaded_file', filename=scan.photo_path.split('/')[-1]) }}" 
-                                         alt="User photo" style="width: 50px; height: 50px; border-radius: 50%; float: right;">
-                                {% endif %}
-                                <strong>{{ scan.plan_type.upper() }}</strong> – {{ scan.target_url }}<br>
-                                <strong>Name:</strong> {{ scan.full_name }}<br>
-                                <strong>Role:</strong> {{ scan.role }}<br>
-                                <strong>Company:</strong> {{ scan.company_name }}<br>
-                                <strong>Your Email:</strong> {{ scan.user_email }}<br>
-                                <strong>Business Email:</strong> {{ scan.business_email }}<br>
-                                <small>Submitted: {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</small><br>
+                                <div class="report-header">
+                                    <div>
+                                        <strong>{{ scan.plan_type.upper() }}</strong> – {{ scan.target_url }}<br>
+                                        <small>Submitted: {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        {% if scan.status == 'completed' %}
+                                            <span class="status-badge completed">✓ Completed</span>
+                                        {% else %}
+                                            <span class="status-badge">{{ scan.status }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if scan.status == 'completed' and scan.report_path %}
+                                        <button class="toggle-report" data-report-id="{{ scan.id }}">View Report</button>
+                                    {% endif %}
+                                </div>
                                 {% if scan.status == 'completed' and scan.report_path %}
-                                    <a href="{{ url_for('view_report', job_id=scan.id) }}" class="btn-link">Download Report</a>
-                                {% else %}
-                                    <span class="status-badge">{{ scan.status }}</span>
+                                    <div id="report-preview-{{ scan.id }}" class="report-preview" style="display: none;">
+                                        <iframe src="{{ url_for('view_report', job_id=scan.id) }}"></iframe>
+                                    </div>
                                 {% endif %}
                             </div>
                         {% endfor %}

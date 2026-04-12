@@ -52,6 +52,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
     supabase_user_id = db.Column(db.String(36), unique=True, nullable=True)
+    credits = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     scans = db.relationship('ScanJob', backref='user', lazy=True)
 
@@ -60,7 +61,7 @@ class ScanJob(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     target_url = db.Column(db.String(500), nullable=False)
     plan_type = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(50), default='queued')  # queued, processing, completed, failed
+    status = db.Column(db.String(50), default='queued')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
     report_path = db.Column(db.String(500), nullable=True)
@@ -73,7 +74,8 @@ class ScanJob(db.Model):
     user_email = db.Column(db.String(120))
     business_email = db.Column(db.String(120))
     verification_code = db.Column(db.String(10), nullable=True)
-    scan_id = db.Column(db.String(32), nullable=True)  # ID from friend's scanner
+    scan_id = db.Column(db.String(32), nullable=True)
+    credits_spent = db.Column(db.Integer, default=0)
 
 class VerificationToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -109,8 +111,34 @@ class WebsiteVerificationCode(db.Model):
     verified = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=1))
 
+class Transaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    amount = db.Column(db.Integer, nullable=False)
+    credits_added = db.Column(db.Integer, nullable=False)
+    razorpay_order_id = db.Column(db.String(100))
+    razorpay_payment_id = db.Column(db.String(100))
+    status = db.Column(db.String(50), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='transactions')
+
+# ---------- Admin Settings Model ----------
+class AdminSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    passcode_hash = db.Column(db.String(256), nullable=False)
+    credit_costs = db.Column(db.JSON, default={"basic": 0, "advanced": 10, "protection_plus": 25})
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 with app.app_context():
     db.create_all()
+    # Ensure admin settings exist (default passcode "nexus admin")
+    admin = AdminSettings.query.get(1)
+    if not admin:
+        default_hash = generate_password_hash("nexus admin")
+        admin = AdminSettings(id=1, passcode_hash=default_hash)
+        db.session.add(admin)
+        db.session.commit()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -123,7 +151,7 @@ def get_or_create_user(supabase_user):
     supabase_id = supabase_user['id']
     user = User.query.filter_by(supabase_user_id=supabase_id).first()
     if not user:
-        user = User(email=email, name=name, supabase_user_id=supabase_id)
+        user = User(email=email, name=name, supabase_user_id=supabase_id, credits=0)
         db.session.add(user)
         db.session.commit()
     return user
@@ -132,6 +160,17 @@ def get_or_create_user(supabase_user):
 def generate_verification_code():
     chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
     return ''.join(random.choices(chars, k=6))
+
+# ---------- Helper: get current credit costs from DB ----------
+def get_credit_costs():
+    admin = AdminSettings.query.get(1)
+    if admin and admin.credit_costs:
+        return admin.credit_costs
+    return {"basic": 0, "advanced": 10, "protection_plus": 25}
+
+# ---------- Helper: check if current user is admin ----------
+def is_admin():
+    return current_user.is_authenticated and current_user.email == 'nexussecurity777@gmail.com'
 
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
@@ -243,7 +282,6 @@ JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://nexus-scanner-9w6p.onrender.
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
-    """Send scan request directly to friend's AI scanner."""
     try:
         response = requests.post(
             f"{JATIN_API_URL}/api/scan/submit",
@@ -257,7 +295,6 @@ def send_to_friend_scanner(scan_id, url, plan, user_email):
         )
         if response.status_code == 200:
             data = response.json()
-            # Friend's scanner returns its own scan_id; we store it
             return data.get('scan_id', scan_id)
         else:
             print(f"Scanner error: {response.text}")
@@ -265,6 +302,18 @@ def send_to_friend_scanner(scan_id, url, plan, user_email):
     except Exception as e:
         print(f"Failed to contact friend's scanner: {e}")
         return None
+
+# ---------- Credit Deduction Helper (uses dynamic costs) ----------
+def deduct_credits(user, plan_type):
+    costs = get_credit_costs()
+    cost = costs.get(plan_type, 0)
+    if cost == 0:
+        return True
+    if (user.credits or 0) >= cost:
+        user.credits -= cost
+        db.session.commit()
+        return True
+    return False
 
 # ---------- Static Routes ----------
 @app.route('/style.css')
@@ -310,6 +359,197 @@ def api_status():
     if current_user.is_authenticated:
         return jsonify({'logged_in': True, 'name': current_user.name, 'email': current_user.email})
     return jsonify({'logged_in': False})
+
+# ---------- Admin Routes ----------
+@app.route('/api/admin/check')
+@login_required
+def admin_check():
+    return jsonify({'is_admin': is_admin()})
+
+@app.route('/api/admin/verify-passcode', methods=['POST'])
+@login_required
+def admin_verify_passcode():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    data = request.json
+    passcode = data.get('passcode')
+    admin = AdminSettings.query.get(1)
+    if admin and check_password_hash(admin.passcode_hash, passcode):
+        session['admin_authenticated'] = True
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'message': 'Invalid passcode'}), 401
+
+@app.route('/api/admin/request-reset', methods=['POST'])
+@login_required
+def admin_request_reset():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    token = secrets.token_urlsafe(32)
+    session['admin_reset_token'] = token
+    reset_url = url_for('admin_reset_page', token=token, _external=True)
+    email_body = f"<p>Click the link below to reset your admin passcode:</p><p><a href='{reset_url}'>Reset Passcode</a></p><p>This link expires in 10 minutes.</p>"
+    try:
+        send_email_via_brevo('nexussecurity777@gmail.com', 'Admin Passcode Reset', email_body)
+        return jsonify({'success': True, 'message': 'Reset email sent'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/admin/reset/<token>')
+def admin_reset_page(token):
+    if session.get('admin_reset_token') != token:
+        return "Invalid or expired token", 400
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head><title>Reset Admin Passcode</title><style>body{background:#000;color:#fff;font-family:Arial;text-align:center;padding:2rem;}input,button{padding:0.5rem;margin:0.5rem;}</style></head>
+    <body>
+        <h2>Reset Admin Passcode</h2>
+        <form id="resetForm">
+            <input type="password" id="new_passcode" placeholder="New passcode" required>
+            <button type="submit">Reset</button>
+        </form>
+        <div id="message"></div>
+        <script>
+            document.getElementById('resetForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const newPasscode = document.getElementById('new_passcode').value;
+                const res = await fetch('/api/admin/reset-passcode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({new_passcode: newPasscode})
+                });
+                const data = await res.json();
+                if(data.success) alert(data.message);
+                else alert(data.message);
+            });
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/api/admin/reset-passcode', methods=['POST'])
+@login_required
+def admin_reset_passcode():
+    if not is_admin():
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    if session.get('admin_reset_token') is None:
+        return jsonify({'success': False, 'message': 'No reset request'}), 400
+    data = request.json
+    new_passcode = data.get('new_passcode')
+    if not new_passcode:
+        return jsonify({'success': False, 'message': 'Passcode required'}), 400
+    admin = AdminSettings.query.get(1)
+    admin.passcode_hash = generate_password_hash(new_passcode)
+    db.session.commit()
+    session.pop('admin_reset_token', None)
+    return jsonify({'success': True, 'message': 'Passcode updated'})
+
+@app.route('/admin')
+@login_required
+def admin_panel():
+    if not is_admin():
+        flash('Access denied', 'danger')
+        return redirect(url_for('index'))
+    if not session.get('admin_authenticated'):
+        return redirect(url_for('admin_login_page'))
+    return render_template('admin.html')
+
+@app.route('/admin/login')
+@login_required
+def admin_login_page():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head><title>Admin Login</title><style>body{background:#000;color:#fff;font-family:Arial;text-align:center;padding:2rem;}input,button{padding:0.5rem;margin:0.5rem;}</style></head>
+    <body>
+        <h2>Admin Passcode Required</h2>
+        <form id="passcodeForm">
+            <input type="password" id="passcode" placeholder="Enter passcode" required>
+            <button type="submit">Verify</button>
+        </form>
+        <p><a href="#" id="forgotLink">Forgot passcode?</a></p>
+        <div id="message"></div>
+        <script>
+            document.getElementById('passcodeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const passcode = document.getElementById('passcode').value;
+                const res = await fetch('/api/admin/verify-passcode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({passcode})
+                });
+                const data = await res.json();
+                if(data.success) window.location.href = '/admin';
+                else alert(data.message);
+            });
+            document.getElementById('forgotLink').addEventListener('click', async (e) => {
+                e.preventDefault();
+                const res = await fetch('/api/admin/request-reset', {method: 'POST'});
+                const data = await res.json();
+                alert(data.message);
+            });
+        </script>
+    </body>
+    </html>
+    '''
+
+@app.route('/api/admin/users')
+@login_required
+def admin_get_users():
+    if not is_admin() or not session.get('admin_authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    users = User.query.all()
+    result = []
+    for user in users:
+        total_scans = ScanJob.query.filter_by(user_id=user.id).count()
+        result.append({
+            'id': user.id,
+            'email': user.email,
+            'name': user.name,
+            'credits': user.credits or 0,
+            'total_scans': total_scans
+        })
+    return jsonify(result)
+
+@app.route('/api/admin/give-credits', methods=['POST'])
+@login_required
+def admin_give_credits():
+    if not is_admin() or not session.get('admin_authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json
+    user_id = data.get('user_id')
+    credits = data.get('credits')
+    if not user_id or not credits:
+        return jsonify({'success': False, 'message': 'Missing fields'}), 400
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    user.credits = (user.credits or 0) + int(credits)
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Added {credits} credits to {user.email}'})
+
+@app.route('/api/admin/update-prices', methods=['POST'])
+@login_required
+def admin_update_prices():
+    if not is_admin() or not session.get('admin_authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json
+    new_costs = data.get('credit_costs')
+    if not new_costs:
+        return jsonify({'success': False, 'message': 'No data'}), 400
+    admin = AdminSettings.query.get(1)
+    admin.credit_costs = new_costs
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Prices updated'})
+
+@app.route('/api/admin/credit-costs')
+@login_required
+def admin_credit_costs():
+    if not is_admin() or not session.get('admin_authenticated'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    return jsonify(get_credit_costs())
 
 # ---------- SCAN REQUEST: TWO PATHS ----------
 @app.route('/api/request_scan', methods=['POST'])
@@ -393,9 +633,14 @@ def verify_scan(token):
         return "Invalid or expired verification link.", 400
 
     prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
-    # Generate a unique scan ID for our system
     scan_id = hashlib.md5(f"{pending.website_url}{pending.user_email}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
+    # Deduct credits using dynamic costs
+    if not deduct_credits(current_user, pending.plan_type):
+        flash('Insufficient credits. Please buy credits to start a scan.', 'danger')
+        return redirect(url_for('profile'))
+
+    costs = get_credit_costs()
     job = ScanJob(
         user_id=pending.user_id,
         target_url=pending.website_url,
@@ -408,17 +653,16 @@ def verify_scan(token):
         user_email=pending.user_email,
         business_email=pending.business_email,
         scan_id=scan_id,
-        status='queued'
+        status='queued',
+        credits_spent=costs.get(pending.plan_type, 0)
     )
     db.session.add(job)
     db.session.commit()
     pending.used = True
     db.session.commit()
 
-    # Send scan request to friend's AI scanner
     remote_scan_id = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
     if remote_scan_id:
-        # Optionally store remote_scan_id in a separate column or just log
         print(f"Scan {scan_id} queued with friend's scanner as {remote_scan_id}")
         flash('Scan confirmed! The AI scanner will process your request.', 'success')
     else:
@@ -452,6 +696,11 @@ def verify_code():
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
             scan_id = hashlib.md5(f"{fd['website_url']}{fd['user_email']}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
+            # Deduct credits using dynamic costs
+            if not deduct_credits(current_user, fd['plan']):
+                return jsonify({'success': False, 'message': 'Insufficient credits. Please buy credits.'}), 400
+
+            costs = get_credit_costs()
             job = ScanJob(
                 user_id=current_user.id,
                 target_url=fd['website_url'],
@@ -465,12 +714,12 @@ def verify_code():
                 business_email=fd['business_email'],
                 verification_code=verification.code,
                 scan_id=scan_id,
-                status='queued'
+                status='queued',
+                credits_spent=costs.get(fd['plan'], 0)
             )
             db.session.add(job)
             db.session.commit()
 
-            # Send to friend's scanner
             remote_scan_id = send_to_friend_scanner(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
             if remote_scan_id:
                 return jsonify({'success': True, 'message': '✅ Verification successful! Scan queued.', 'job_id': job.id})
@@ -486,9 +735,8 @@ def verify_code():
 # ---------- Callback from Friend's Scanner ----------
 @app.route('/api/scan-callback', methods=['POST'])
 def scan_callback():
-    """Receives report URL from friend's AI scanner when scan is complete."""
     data = request.json
-    scan_id = data.get('scan_id')       # our own scan_id (we sent it)
+    scan_id = data.get('scan_id')
     report_url = data.get('report_url')
     status = data.get('status')
 
@@ -501,7 +749,6 @@ def scan_callback():
 
     if status == 'completed' and report_url:
         try:
-            # Download the HTML report
             response = requests.get(report_url, timeout=30)
             if response.status_code == 200:
                 filename = f"report_{scan_id}.html"
@@ -549,11 +796,72 @@ def test_email():
     except Exception as e:
         return f'❌ Error: {str(e)}'
 
-@app.route('/api/payment_mock', methods=['POST'])
-def payment_mock():
-    data = request.get_json()
-    plan = data.get('plan')
-    return jsonify({'success': True, 'payment_id': f'pay_{uuid.uuid4().hex[:12]}'})
+# ========== PAYMENT ENDPOINTS (DISABLED FOR NOW) ==========
+# To enable Razorpay, uncomment the code below, set CREDIT_COSTS to non‑zero values,
+# and add RAZORPAY_KEY_ID & RAZORPAY_KEY_SECRET to your environment variables.
+
+"""
+import razorpay
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+@app.route('/api/create-order', methods=['POST'])
+@login_required
+def create_order():
+    data = request.json
+    amount = data.get('amount')
+    credits = data.get('credits')
+    if not amount or not credits:
+        return jsonify({'error': 'Invalid request'}), 400
+    order_data = {
+        'amount': int(amount * 100),
+        'currency': 'INR',
+        'receipt': f"credits_{current_user.id}_{int(datetime.utcnow().timestamp())}"
+    }
+    order = razorpay_client.order.create(data=order_data)
+    tx = Transaction(
+        user_id=current_user.id,
+        amount=amount,
+        credits_added=credits,
+        razorpay_order_id=order['id'],
+        status='created'
+    )
+    db.session.add(tx)
+    db.session.commit()
+    return jsonify({
+        'order_id': order['id'],
+        'amount': amount,
+        'currency': 'INR',
+        'key': RAZORPAY_KEY_ID
+    })
+
+@app.route('/api/verify-payment', methods=['POST'])
+@login_required
+def verify_payment():
+    data = request.json
+    razorpay_order_id = data.get('order_id')
+    razorpay_payment_id = data.get('payment_id')
+    razorpay_signature = data.get('signature')
+    try:
+        params_dict = {
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature
+        }
+        razorpay_client.utility.verify_payment_signature(params_dict)
+        tx = Transaction.query.filter_by(razorpay_order_id=razorpay_order_id).first()
+        if not tx:
+            return jsonify({'success': False, 'message': 'Transaction not found'}), 404
+        tx.razorpay_payment_id = razorpay_payment_id
+        tx.status = 'completed'
+        current_user.credits = (current_user.credits or 0) + tx.credits_added
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Added {tx.credits_added} credits!'})
+    except Exception as e:
+        print(f"Payment error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 400
+"""
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -16,10 +16,13 @@
             <h1>NEXUS SECURITY</h1>
         </div>
         <div class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="#plans">Plans</a>
-            <div id="authButtonContainer"></div>
-        </div>
+    <a href="index.html">Home</a>
+    <a href="#plans">Plans</a>
+    <div id="authButtonContainer"></div>
+    <div id="adminButtonContainer" style="display: none;">
+        <a href="/admin" id="adminButton"><span>Admin Panel</span></a>
+    </div>
+</div>
     </nav>
 
     <section class="hero" id="home">
@@ -204,6 +207,9 @@
                     </div>
                 </div>
 
+                <!-- Verify Now button (email method only) -->
+                <button type="button" class="verify-now-btn btn-53" style="display: none; background: #2f9b9b;">Verify Now</button>
+
                 <!-- Manual Code Panel (hidden initially) -->
                 <div class="manual-code-panel" style="display: none;">
                     <div class="code-card">
@@ -217,9 +223,6 @@
                         <div class="verify-status"></div>
                     </div>
                 </div>
-
-                <!-- Main Start Scan Button (disabled until method selected) -->
-                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
         </div>
     </div>
@@ -275,6 +278,8 @@
                     </div>
                 </div>
 
+                <button type="button" class="verify-now-btn btn-53" style="display: none; background: #2f9b9b;">Verify Now</button>
+
                 <div class="manual-code-panel" style="display: none;">
                     <div class="code-card">
                         <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
@@ -287,8 +292,6 @@
                         <div class="verify-status"></div>
                     </div>
                 </div>
-
-                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
         </div>
     </div>
@@ -344,6 +347,8 @@
                     </div>
                 </div>
 
+                <button type="button" class="verify-now-btn btn-53" style="display: none; background: #2f9b9b;">Verify Now</button>
+
                 <div class="manual-code-panel" style="display: none;">
                     <div class="code-card">
                         <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
@@ -356,8 +361,6 @@
                         <div class="verify-status"></div>
                     </div>
                 </div>
-
-                <button type="button" class="start-scan-btn btn-53" disabled>Select verification method first</button>
             </form>
         </div>
     </div>

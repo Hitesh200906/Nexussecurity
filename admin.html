@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel – Nexus Security</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <img src="image.jpeg" alt="Background" class="bg-image">
+    <nav class="navbar">
+        <div class="logo"><h1>NEXUS SECURITY – Admin Panel</h1></div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <h2>Admin Control Panel</h2>
+
+        <!-- Plan Price Management -->
+        <div class="admin-card">
+            <h3>Plan Credit Costs</h3>
+            <div id="price-editor">
+                <div class="price-row">
+                    <label>Basic:</label>
+                    <input type="number" id="cost_basic" value="0" step="1">
+                </div>
+                <div class="price-row">
+                    <label>Advanced:</label>
+                    <input type="number" id="cost_advanced" value="10" step="1">
+                </div>
+                <div class="price-row">
+                    <label>Protection+:</label>
+                    <input type="number" id="cost_protection" value="25" step="1">
+                </div>
+                <button id="updatePricesBtn" class="admin-btn">Update Prices</button>
+                <span id="priceMsg" class="status-msg"></span>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div class="admin-card">
+            <h3>User Management</h3>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search by email...">
+            <div style="overflow-x: auto;">
+                <table class="user-table">
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Credits</th><th>Total Scans</th><th>Action</th></tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        let allUsers = [];
+
+        async function loadUsers() {
+            const res = await fetch('/api/admin/users');
+            const users = await res.json();
+            allUsers = users;
+            renderUsers(users);
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            users.forEach(user => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = user.id;
+                row.insertCell(1).textContent = user.name;
+                row.insertCell(2).textContent = user.email;
+                row.insertCell(3).textContent = user.credits;
+                row.insertCell(4).textContent = user.total_scans;
+                const actionCell = row.insertCell(5);
+                const container = document.createElement('div');
+                container.className = 'give-credits-form';
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.placeholder = 'Credits';
+                input.style.width = '80px';
+                const btn = document.createElement('button');
+                btn.textContent = 'Add';
+                btn.className = 'admin-small-btn';
+                btn.onclick = async () => {
+                    const credits = input.value;
+                    if (!credits) return;
+                    const res = await fetch('/api/admin/give-credits', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({user_id: user.id, credits: parseInt(credits)})
+                    });
+                    const data = await res.json();
+                    alert(data.message);
+                    if (data.success) loadUsers();
+                };
+                container.appendChild(input);
+                container.appendChild(btn);
+                actionCell.appendChild(container);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allUsers.filter(u => u.email.toLowerCase().includes(term));
+            renderUsers(filtered);
+        });
+
+        document.getElementById('updatePricesBtn').addEventListener('click', async () => {
+            const costs = {
+                basic: parseInt(document.getElementById('cost_basic').value),
+                advanced: parseInt(document.getElementById('cost_advanced').value),
+                protection_plus: parseInt(document.getElementById('cost_protection').value)
+            };
+            const res = await fetch('/api/admin/update-prices', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({credit_costs: costs})
+            });
+            const data = await res.json();
+            document.getElementById('priceMsg').textContent = data.message;
+            if (data.success) setTimeout(() => location.reload(), 1000);
+        });
+
+        async function loadPrices() {
+            const res = await fetch('/api/admin/credit-costs');
+            if (res.ok) {
+                const costs = await res.json();
+                document.getElementById('cost_basic').value = costs.basic;
+                document.getElementById('cost_advanced').value = costs.advanced;
+                document.getElementById('cost_protection').value = costs.protection_plus;
+            }
+        }
+        loadPrices();
+        loadUsers();
+    </script>
+</body>
+</html>
