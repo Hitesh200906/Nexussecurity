@@ -45,6 +45,11 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# ---------- Helper: generate 6-character alphanumeric code for manual verification ----------
+def generate_verification_code():
+    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
+    return ''.join(random.choices(chars, k=6))
+
 # ---------- Database Models ----------
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -133,12 +138,11 @@ def login():
 
 @app.route('/login/google')
 def google_login():
-    # ✅ Use BASE_URL from environment to avoid localhost redirect
     base_url = os.getenv('BASE_URL')
     if not base_url:
-        # Fallback for local development
         base_url = request.host_url.rstrip('/')
     callback_url = f"{base_url}/auth/callback"
+    app.logger.info(f"Google OAuth callback URL: {callback_url}")
     response = supabase.auth.sign_in_with_oauth({
         "provider": "google",
         "options": {"redirect_to": callback_url}
@@ -149,16 +153,21 @@ def google_login():
 def auth_callback():
     code = request.args.get('code')
     if not code:
-        flash('Authentication failed.', 'danger')
+        app.logger.error("No code received in callback")
+        flash('Authentication failed: No code received.', 'danger')
         return redirect(url_for('login'))
+    
     try:
+        app.logger.info(f"Exchanging code for session...")
         session_info = supabase.auth.exchange_code_for_session({'auth_code': code})
         user = session_info.user
+        app.logger.info(f"User authenticated: {user.email}")
         session['supabase_access_token'] = session_info.access_token
         db_user = get_or_create_user(user.dict())
         login_user(db_user)
         return redirect(url_for('index'))
     except Exception as e:
+        app.logger.error(f"Auth callback error: {str(e)}")
         flash(f'Authentication error: {str(e)}', 'danger')
         return redirect(url_for('login'))
 
@@ -283,7 +292,7 @@ th {{ background: #1a1a2a; }}
 <p><strong>Plan:</strong> {job.plan_type.upper()}</p>
 <p><strong>Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
 <h2>Vulnerabilities Found ({len(vulns)})</h2>
-</table>
+<table>
 <th>Name</th><th>Severity</th><th>Description</th>
 """
     for v in vulns:
