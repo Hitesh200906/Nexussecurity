@@ -45,11 +45,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# ---------- Helper: generate 6-character alphanumeric code for manual verification ----------
-def generate_verification_code():
-    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
-    return ''.join(random.choices(chars, k=6))
-
 # ---------- Database Models ----------
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -131,6 +126,11 @@ def get_or_create_user(supabase_user):
         db.session.commit()
     return user
 
+# ---------- Helper: generate 6-character alphanumeric code ----------
+def generate_verification_code():
+    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
+    return ''.join(random.choices(chars, k=6))
+
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
 def login():
@@ -142,7 +142,6 @@ def google_login():
     if not base_url:
         base_url = request.host_url.rstrip('/')
     callback_url = f"{base_url}/auth/callback"
-    app.logger.info(f"Google OAuth callback URL: {callback_url}")
     response = supabase.auth.sign_in_with_oauth({
         "provider": "google",
         "options": {"redirect_to": callback_url}
@@ -153,16 +152,14 @@ def google_login():
 def auth_callback():
     code = request.args.get('code')
     if not code:
-        app.logger.error("No code received in callback")
-        flash('Authentication failed: No code received.', 'danger')
+        flash('Authentication failed.', 'danger')
         return redirect(url_for('login'))
-    
     try:
-        app.logger.info(f"Exchanging code for session...")
         session_info = supabase.auth.exchange_code_for_session({'auth_code': code})
         user = session_info.user
-        app.logger.info(f"User authenticated: {user.email}")
-        session['supabase_access_token'] = session_info.access_token
+        # ✅ FIX: access token is inside session_info.session
+        access_token = session_info.session.access_token if session_info.session else None
+        session['supabase_access_token'] = access_token
         db_user = get_or_create_user(user.dict())
         login_user(db_user)
         return redirect(url_for('index'))
@@ -219,7 +216,7 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ---------- Email sending using Brevo HTTP API (no SMTP) ----------
+# ---------- Email sending using Brevo HTTP API ----------
 def send_email_via_brevo(to_email, subject, body):
     api_key = os.getenv('BREVO_API_KEY')
     if not api_key:
