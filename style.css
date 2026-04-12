@@ -1520,43 +1520,6 @@ footer {
     }
 }
 
-/* URL section form group styling */
-.url-section .form-group {
-    margin-bottom: 1rem;
-    position: relative;
-}
-.url-section .form-group input {
-    width: 100%;
-    padding: 0.9rem 1rem 0.9rem 2.8rem;
-    background: rgba(15, 15, 23, 0.8);
-    border: 1px solid var(--border);
-    border-radius: 50px;
-    color: var(--text);
-    font-size: 1rem;
-    outline: none;
-    transition: all 0.3s;
-}
-.url-section .form-group input:focus {
-    border-color: var(--accent);
-    background: rgba(15, 15, 23, 0.95);
-    box-shadow: 0 0 0 3px rgba(47, 155, 155, 0.2);
-}
-.url-section .input-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 1rem;
-    pointer-events: none;
-    transition: color 0.3s;
-}
-.url-section .form-group input:focus + .input-icon {
-    color: var(--accent);
-}
-
-
-
 /* Background image as HTML element */
 .bg-image {
     position: fixed;
@@ -1703,46 +1666,7 @@ body::after {
     transition: all 0.3s ease;
 }
 
-/* File input styling */
-.form-group input[type="file"] {
-    background: #1a1a2a;
-    border: 1px solid #2f9b9b;
-    border-radius: 8px;
-    padding: 0.6rem 0.8rem;
-    color: #fff;
-    cursor: pointer;
-    width: 100%;
-    font-size: 0.9rem;
-}
 
-.form-group input[type="file"]::file-selector-button {
-    background: #2f9b9b;
-    border: none;
-    border-radius: 6px;
-    padding: 0.4rem 1rem;
-    margin-right: 1rem;
-    color: #fff;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.form-group input[type="file"]::file-selector-button:hover {
-    background: #3fbfbf;
-}
-
-/* Small helper text */
-.form-group small {
-    display: block;
-    margin-top: 0.4rem;
-    font-size: 0.75rem;
-    color: #9ca3af;
-}
-
-/* Optional: adjust the photo icon position */
-.form-group .input-icon {
-    top: 2.2rem; /* Align with file input */
-}
 
 
 /* ============================================
@@ -2311,10 +2235,29 @@ body::after {
 
 
 
-
-/* Fix for all input icons – ensure parent is relative and icon centered */
+/* ===== Universal Input Icon Fix ===== */
 .form-group {
-    position: relative !important;
+    position: relative;
+    margin-bottom: 1.2rem;
+}
+
+.form-group input,
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 2.8rem;
+    background: rgba(15, 15, 23, 0.8);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    border-color: var(--accent);
+    background: rgba(15, 15, 23, 0.95);
+    box-shadow: 0 0 0 3px rgba(47, 155, 155, 0.2);
 }
 
 .input-icon {
@@ -2328,8 +2271,6 @@ body::after {
     transition: color 0.3s;
 }
 
-/* Additional tweak for login page specific inputs (already have left padding) */
-.auth-form .form-group input,
-.url-section .form-group input {
-    padding-left: 2.8rem; /* ensure enough space for icon */
+.form-group input:focus + .input-icon {
+    color: var(--accent);
 }
