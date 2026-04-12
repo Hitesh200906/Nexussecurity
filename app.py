@@ -6,12 +6,12 @@ import random
 import uuid
 import secrets
 import string
+import requests
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -59,7 +59,7 @@ class ScanJob(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     target_url = db.Column(db.String(500), nullable=False)
     plan_type = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(50), default='pending')
+    status = db.Column(db.String(50), default='queued')  # queued, processing, completed, failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
     report_path = db.Column(db.String(500), nullable=True)
@@ -72,6 +72,7 @@ class ScanJob(db.Model):
     user_email = db.Column(db.String(120))
     business_email = db.Column(db.String(120))
     verification_code = db.Column(db.String(10), nullable=True)
+    scan_id = db.Column(db.String(32), nullable=True)  # ID from scanner backend
 
 class VerificationToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -114,6 +115,11 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# ---------- Helper: generate 6-character alphanumeric code ----------
+def generate_verification_code():
+    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
+    return ''.join(random.choices(chars, k=6))
+
 # ---------- Helper: get or create user from Supabase user ----------
 def get_or_create_user(supabase_user):
     email = supabase_user['email']
@@ -126,10 +132,51 @@ def get_or_create_user(supabase_user):
         db.session.commit()
     return user
 
-# ---------- Helper: generate 6-character alphanumeric code ----------
-def generate_verification_code():
-    chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
-    return ''.join(random.choices(chars, k=6))
+# ---------- Email sending using Brevo HTTP API ----------
+def send_email_via_brevo(to_email, subject, body):
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        raise Exception("BREVO_API_KEY not set")
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    data = {
+        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": body
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error: {response.text}")
+
+# ---------- Scanner backend integration ----------
+SCANNER_BACKEND_URL = os.getenv('SCANNER_BACKEND_URL', 'http://localhost:5002')
+
+def send_to_scanner_backend(scan_id, url, plan, user_email):
+    """Send scan request to scanner_backend.py"""
+    try:
+        response = requests.post(
+            f"{SCANNER_BACKEND_URL}/api/start-scan",
+            json={
+                'url': url,
+                'plan': plan,
+                'email': user_email,
+                'scan_id': scan_id
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"Scanner backend error: {response.text}")
+            return False
+    except Exception as e:
+        print(f"Failed to contact scanner backend: {e}")
+        return False
 
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
@@ -157,7 +204,6 @@ def auth_callback():
     try:
         session_info = supabase.auth.exchange_code_for_session({'auth_code': code})
         user = session_info.user
-        # ✅ FIX: access token is inside session_info.session
         access_token = session_info.session.access_token if session_info.session else None
         session['supabase_access_token'] = access_token
         db_user = get_or_create_user(user.dict())
@@ -215,122 +261,6 @@ def logout():
     logout_user()
     session.clear()
     return redirect(url_for('index'))
-
-# ---------- Email sending using Brevo HTTP API ----------
-def send_email_via_brevo(to_email, subject, body):
-    api_key = os.getenv('BREVO_API_KEY')
-    if not api_key:
-        raise Exception("BREVO_API_KEY not set")
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "accept": "application/json",
-        "api-key": api_key,
-        "content-type": "application/json"
-    }
-    data = {
-        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": body
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code not in (200, 201):
-        raise Exception(f"Brevo API error: {response.text}")
-
-# ---------- Simulated scanning ----------
-def generate_vulnerabilities(plan_type, url):
-    vulns = []
-    if plan_type == 'basic':
-        vulns = [
-            {'name': 'Missing X-Frame-Options', 'severity': 'Medium', 'description': 'Clickjacking risk'},
-            {'name': 'Insecure Cookie', 'severity': 'Low', 'description': 'Cookie missing Secure flag'}
-        ]
-    elif plan_type == 'advanced':
-        vulns = [
-            {'name': 'Missing X-Frame-Options', 'severity': 'Medium', 'description': 'Clickjacking risk'},
-            {'name': 'Insecure Cookie', 'severity': 'Low', 'description': 'Cookie missing Secure flag'},
-            {'name': 'SQL Injection (time-based)', 'severity': 'High', 'description': 'Parameter id vulnerable'},
-            {'name': 'Stored XSS', 'severity': 'Medium', 'description': 'Comment field not sanitized'}
-        ]
-    elif plan_type == 'protection_plus':
-        vulns = [
-            {'name': 'Missing X-Frame-Options', 'severity': 'Medium', 'description': 'Clickjacking risk'},
-            {'name': 'Insecure Cookie', 'severity': 'Low', 'description': 'Cookie missing Secure flag'},
-            {'name': 'SQL Injection (time-based)', 'severity': 'High', 'description': 'Parameter id vulnerable'},
-            {'name': 'Stored XSS', 'severity': 'Medium', 'description': 'Comment field not sanitized'},
-            {'name': 'Critical: Remote Code Execution', 'severity': 'Critical', 'description': 'Unserialize user input'},
-            {'name': 'Hardcoded Secret in JS', 'severity': 'High', 'description': 'API key exposed'}
-        ]
-    return vulns
-
-def generate_report_for_job(job_id):
-    job = ScanJob.query.get(job_id)
-    if not job:
-        return
-    vulns = generate_vulnerabilities(job.plan_type, job.target_url)
-    html = f"""<!DOCTYPE html>
-<html>
-<head><title>Security Report - {job.target_url}</title>
-<style>
-body {{ font-family: Arial; background: #0a0a0f; color: #fff; padding: 2rem; }}
-h1 {{ color: #2f9b9b; }}
-table {{ width: 100%; border-collapse: collapse; margin-top: 1rem; }}
-th, td {{ border: 1px solid #2f9b9b; padding: 0.5rem; text-align: left; }}
-th {{ background: #1a1a2a; }}
-.critical {{ color: #ff5555; }}
-.high {{ color: #ffaa55; }}
-.medium {{ color: #ffff55; }}
-.low {{ color: #55ff55; }}
-</style>
-</head>
-<body>
-<h1>Nexus Security Scan Report</h1>
-<p><strong>Target:</strong> {job.target_url}</p>
-<p><strong>Plan:</strong> {job.plan_type.upper()}</p>
-<p><strong>Date:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
-<h2>Vulnerabilities Found ({len(vulns)})</h2>
-<table>
-<th>Name</th><th>Severity</th><th>Description</th>
-"""
-    for v in vulns:
-        severity_class = v['severity'].lower()
-        html += f"<tr><td>{v['name']}</td><td class='{severity_class}'>{v['severity']}</td><td>{v['description']}</td></tr>"
-    html += """</table>
-<p>Remediation advice: Contact your developer to fix the issues listed above.</p>
-<p>Nexus Security Team</p>
-</body></html>"""
-    filename = f"report_{job_id}_{int(time.time())}.html"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    with open(filepath, 'w') as f:
-        f.write(html)
-    job.report_path = filename
-    job.status = 'completed'
-    job.completed_at = datetime.utcnow()
-    db.session.commit()
-    db.session.expunge(job)
-
-def background_worker():
-    with app.app_context():
-        while True:
-            try:
-                job = ScanJob.query.filter_by(status='pending').order_by(ScanJob.created_at).first()
-                if job:
-                    generate_report_for_job(job.id)
-                    db.session.expunge_all()
-                else:
-                    time.sleep(5)
-                db.session.commit()
-                db.session.remove()
-            except Exception as e:
-                print(f"Background worker error: {e}")
-                db.session.rollback()
-                db.session.remove()
-            time.sleep(10)
-
-if not hasattr(app, 'scanner_started'):
-    thread = threading.Thread(target=background_worker, daemon=True)
-    thread.start()
-    app.scanner_started = True
 
 # ---------- Static Routes ----------
 @app.route('/style.css')
@@ -459,6 +389,10 @@ def verify_scan(token):
         return "Invalid or expired verification link.", 400
 
     prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
+    # Generate a unique scan ID for the scanner backend
+    import hashlib
+    scan_id = hashlib.md5(f"{pending.website_url}{pending.user_email}{datetime.utcnow()}".encode()).hexdigest()[:16]
+
     job = ScanJob(
         user_id=pending.user_id,
         target_url=pending.website_url,
@@ -469,13 +403,25 @@ def verify_scan(token):
         role=pending.role,
         company_name=pending.company_name,
         user_email=pending.user_email,
-        business_email=pending.business_email
+        business_email=pending.business_email,
+        scan_id=scan_id,
+        status='queued'
     )
     db.session.add(job)
     db.session.commit()
     pending.used = True
     db.session.commit()
-    flash('Scan confirmed! We will start the scan shortly.', 'success')
+
+    # Send scan request to scanner backend
+    success = send_to_scanner_backend(scan_id, pending.website_url, pending.plan_type, pending.user_email)
+    if not success:
+        # If failed, update job status to 'failed'
+        job.status = 'failed'
+        db.session.commit()
+        flash('Scan request could not be sent. Please try again later.', 'danger')
+    else:
+        flash('Scan confirmed! The scan will start shortly.', 'success')
+
     return redirect(url_for('profile'))
 
 @app.route('/api/verify_code', methods=['POST'])
@@ -500,6 +446,9 @@ def verify_code():
             verification.verified = True
             fd = verification.form_data
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
+            import hashlib
+            scan_id = hashlib.md5(f"{fd['website_url']}{fd['user_email']}{datetime.utcnow()}".encode()).hexdigest()[:16]
+
             job = ScanJob(
                 user_id=current_user.id,
                 target_url=fd['website_url'],
@@ -511,16 +460,71 @@ def verify_code():
                 company_name=fd['company_name'],
                 user_email=fd['user_email'],
                 business_email=fd['business_email'],
-                verification_code=verification.code
+                verification_code=verification.code,
+                scan_id=scan_id,
+                status='queued'
             )
             db.session.add(job)
             db.session.commit()
-            return jsonify({'success': True, 'message': '✅ Verification successful! You can now start the scan.', 'job_id': job.id})
+
+            # Send to scanner backend
+            success = send_to_scanner_backend(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
+            if not success:
+                job.status = 'failed'
+                db.session.commit()
+                return jsonify({'success': False, 'message': 'Scan request failed. Please try again.'}), 500
+
+            return jsonify({'success': True, 'message': '✅ Verification successful! Scan queued.', 'job_id': job.id})
         else:
             return jsonify({'success': False, 'message': f'Code "{verification.code}" not found on your website. Make sure you added it to the HTML source.'}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
+# ---------- Callback from scanner backend ----------
+@app.route('/api/scan-callback', methods=['POST'])
+def scan_callback():
+    """Called by scanner_backend when a scan is completed."""
+    data = request.json
+    scan_id = data.get('scan_id')
+    report_url = data.get('report_url')
+    status = data.get('status')
+
+    if not scan_id:
+        return jsonify({'error': 'Missing scan_id'}), 400
+
+    job = ScanJob.query.filter_by(scan_id=scan_id).first()
+    if not job:
+        return jsonify({'error': 'Scan job not found'}), 404
+
+    if status == 'completed' and report_url:
+        try:
+            # Download the HTML report from the provided URL
+            response = requests.get(report_url, timeout=30)
+            if response.status_code == 200:
+                filename = f"report_{scan_id}.html"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(response.text)
+                job.report_path = filename
+                job.status = 'completed'
+                job.completed_at = datetime.utcnow()
+                db.session.commit()
+                return jsonify({'status': 'ok'})
+            else:
+                job.status = 'failed'
+                db.session.commit()
+                return jsonify({'error': 'Failed to download report'}), 500
+        except Exception as e:
+            print(f"Callback error: {e}")
+            job.status = 'failed'
+            db.session.commit()
+            return jsonify({'error': str(e)}), 500
+    else:
+        job.status = status or 'failed'
+        db.session.commit()
+        return jsonify({'status': 'updated'})
+
+# ---------- View Report ----------
 @app.route('/view_report/<int:job_id>')
 @login_required
 def view_report(job_id):
@@ -533,6 +537,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
+# ---------- Test email endpoint (optional) ----------
 @app.route('/test-email')
 def test_email():
     try:
