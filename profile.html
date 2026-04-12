@@ -11,7 +11,6 @@
 </head>
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
-
     <nav class="navbar">
         <div class="logo"><h1>NEXUS SECURITY</h1></div>
         <div class="nav-links">
@@ -21,78 +20,85 @@
         </div>
     </nav>
 
-    <div class="profile-container">
-        <div class="profile-card">
-            <h2>My Profile</h2>
-            <div class="profile-info">
-                <p><strong>Name:</strong> {{ user.name }}</p>
-                <p><strong>Email:</strong> {{ user.email }}</p>
-            </div>
+    <div class="profile-dashboard">
+        <!-- Welcome & Account Info -->
+        <div class="welcome-section">
+            <h1>Welcome, {{ user.name }} 👋</h1>
+            <p>{{ user.email }}</p>
+        </div>
 
-            <!-- Credits Section with Animated Button -->
-            <div class="credits-card">
-                <div>
-                    <i class="fas fa-coins"></i> <strong>Your Credits</strong>
-                    <div class="credits-amount">{{ user.credits or 0 }} credits</div>
-                </div>
-                <div>
+        <!-- Stats Grid -->
+        <div class="dashboard-grid">
+            <!-- Credits Card -->
+            <div class="dashboard-card">
+                <div class="card-title"><i class="fas fa-coins"></i> Credits Balance</div>
+                <div class="stat-number">{{ user.credits or 0 }} credits</div>
+                <div class="stat-label">1 credit = 1 scan (Advanced plan)</div>
+                <div class="credits-action">
                     <button id="buyCreditsBtn" class="pay-btn">
                         <span class="btn-text">Buy Credits</span>
                         <div class="icon-container">
-                            <svg viewBox="0 0 24 24" class="icon card-icon">
-                                <path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18C2,19.11 2.89,20 4,20H20C21.11,20 22,19.11 22,18V6C22,4.89 21.11,4 20,4Z" fill="currentColor"></path>
-                            </svg>
-                            <svg viewBox="0 0 24 24" class="icon payment-icon">
-                                <path d="M2,17H22V21H2V17M6.25,7H9V6H6V3H18V6H15V7H17.75L19,17H5L6.25,7M9,10H15V8H9V10M9,13H15V11H9V13Z" fill="currentColor"></path>
-                            </svg>
-                            <svg viewBox="0 0 24 24" class="icon dollar-icon">
-                                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="currentColor"></path>
-                            </svg>
-                            <svg viewBox="0 0 24 24" class="icon wallet-icon default-icon">
-                                <path d="M21,18V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5A2,2 0 0,1 5,3H19A2,2 0 0,1 21,5V6H12C10.89,6 10,6.9 10,8V16A2,2 0 0,0 12,18M12,16H22V8H12M16,13.5A1.5,1.5 0 0,1 14.5,12A1.5,1.5 0 0,1 16,10.5A1.5,1.5 0 0,1 17.5,12A1.5,1.5 0 0,1 16,13.5Z" fill="currentColor"></path>
-                            </svg>
-                            <svg viewBox="0 0 24 24" class="icon check-icon">
-                                <path d="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z" fill="currentColor"></path>
-                            </svg>
+                            <svg viewBox="0 0 24 24" class="icon card-icon"><path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18C2,19.11 2.89,20 4,20H20C21.11,20 22,19.11 22,18V6C22,4.89 21.11,4 20,4Z" fill="currentColor"></path></svg>
+                            <svg viewBox="0 0 24 24" class="icon payment-icon"><path d="M2,17H22V21H2V17M6.25,7H9V6H6V3H18V6H15V7H17.75L19,17H5L6.25,7M9,10H15V8H9V10M9,13H15V11H9V13Z" fill="currentColor"></path></svg>
+                            <svg viewBox="0 0 24 24" class="icon dollar-icon"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" fill="currentColor"></path></svg>
+                            <svg viewBox="0 0 24 24" class="icon wallet-icon default-icon"><path d="M21,18V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5A2,2 0 0,1 5,3H19A2,2 0 0,1 21,5V6H12C10.89,6 10,6.9 10,8V16A2,2 0 0,0 12,18M12,16H22V8H12M16,13.5A1.5,1.5 0 0,1 14.5,12A1.5,1.5 0 0,1 16,10.5A1.5,1.5 0 0,1 17.5,12A1.5,1.5 0 0,1 16,13.5Z" fill="currentColor"></path></svg>
+                            <svg viewBox="0 0 24 24" class="icon check-icon"><path d="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z" fill="currentColor"></path></svg>
                         </div>
                     </button>
                 </div>
             </div>
 
-            <!-- Scan History -->
-            <div class="scan-history">
-                <h3>Scan History</h3>
-                <div id="scanHistoryList">
-                    {% if scans %}
-                        {% for scan in scans %}
-                            <div class="scan-item">
-                                <div class="report-header">
-                                    <div>
-                                        <strong>{{ scan.plan_type.upper() }}</strong> – {{ scan.target_url }}<br>
-                                        <small>Submitted: {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                        {% if scan.status == 'completed' %}
-                                            <span class="status-badge completed">✓ Completed</span>
-                                        {% else %}
-                                            <span class="status-badge">{{ scan.status }}</span>
-                                        {% endif %}
-                                    </div>
-                                    {% if scan.status == 'completed' and scan.report_path %}
-                                        <button class="toggle-report" data-report-id="{{ scan.id }}">View Report</button>
-                                    {% endif %}
-                                </div>
+            <!-- Total Scans Card -->
+            <div class="dashboard-card">
+                <div class="card-title"><i class="fas fa-chart-line"></i> Total Scans</div>
+                <div class="stat-number">{{ scans|length }}</div>
+                <div class="stat-label">All time scans</div>
+            </div>
+
+            <!-- Completed Scans Card -->
+            <div class="dashboard-card">
+                <div class="card-title"><i class="fas fa-check-circle"></i> Completed</div>
+                <div class="stat-number">{{ scans|selectattr('status', 'equalto', 'completed')|list|length }}</div>
+                <div class="stat-label">Reports ready</div>
+            </div>
+        </div>
+
+        <!-- Recent Scans Section -->
+        <div class="recent-scans">
+            <h3><i class="fas fa-history"></i> Scan History</h3>
+            {% if scans %}
+                <div class="scan-list">
+                    {% for scan in scans %}
+                        <div class="scan-card">
+                            <div class="scan-header">
+                                <span class="scan-plan">{{ scan.plan_type.upper() }}</span>
                                 {% if scan.status == 'completed' and scan.report_path %}
-                                    <div id="report-preview-{{ scan.id }}" class="report-preview" style="display: none;">
-                                        <iframe src="{{ url_for('view_report', job_id=scan.id) }}"></iframe>
-                                    </div>
+                                    <button class="toggle-report" data-report-id="{{ scan.id }}">View Report</button>
+                                {% else %}
+                                    <span class="status-badge">{{ scan.status }}</span>
                                 {% endif %}
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="no-scans">No scans yet. Start a scan from the home page.</p>
-                    {% endif %}
+                            <div class="scan-url">{{ scan.target_url }}</div>
+                            <div class="scan-meta">
+                                <i class="far fa-calendar-alt"></i> {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% if scan.credits_spent %} • <i class="fas fa-coins"></i> {{ scan.credits_spent }} credits{% endif %}
+                            </div>
+                            {% if scan.status == 'completed' and scan.report_path %}
+                                <div id="report-preview-{{ scan.id }}" class="report-preview" style="display: none;">
+                                    <iframe src="{{ url_for('view_report', job_id=scan.id) }}"></iframe>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
-            </div>
-            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+            {% else %}
+                <p class="no-scans"><i class="fas fa-search"></i> No scans yet. <a href="/#plans">Start your first scan</a></p>
+            {% endif %}
+        </div>
+
+        <!-- Logout Button -->
+        <div class="logout-container">
+            <a href="{{ url_for('logout') }}" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
