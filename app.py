@@ -277,14 +277,17 @@ def send_email_via_brevo(to_email, subject, body):
     if response.status_code not in (200, 201):
         raise Exception(f"Brevo API error: {response.text}")
 
-# ---------- Friend's AI Scanner Integration ----------
+# ---------- Friend's AI Scanner Integration (with debug logging) ----------
 JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://nexus-scanner-9w6p.onrender.com')
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
+    full_url = f"{JATIN_API_URL}/api/scan/submit"
+    print(f"🔍 Sending scan to: {full_url}")
+    print(f"🔍 Payload: {{'url': {url}, 'plan': {plan}, 'scan_id': {scan_id}, 'webhook_url': {CALLBACK_URL}}}")
     try:
         response = requests.post(
-            f"{JATIN_API_URL}/api/scan/submit",
+            full_url,
             json={
                 'url': url,
                 'plan': plan,
@@ -293,14 +296,22 @@ def send_to_friend_scanner(scan_id, url, plan, user_email):
             },
             timeout=10
         )
+        print(f"✅ Scanner response status: {response.status_code}")
+        print(f"✅ Scanner response body: {response.text}")
         if response.status_code == 200:
             data = response.json()
             return data.get('scan_id', scan_id)
         else:
-            print(f"Scanner error: {response.text}")
+            print(f"❌ Scanner returned error: {response.text}")
             return None
+    except requests.exceptions.Timeout:
+        print("❌ Request timed out after 10 seconds")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Connection error: {e}")
+        return None
     except Exception as e:
-        print(f"Failed to contact friend's scanner: {e}")
+        print(f"❌ Unexpected error: {e}")
         return None
 
 # ---------- Credit Deduction Helper (uses dynamic costs) ----------
@@ -786,6 +797,23 @@ def view_report(job_id):
         flash('Report is not ready yet. Please check back later.', 'info')
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
+
+# ---------- Download Report (NEW) ----------
+@app.route('/download_report/<int:job_id>')
+@login_required
+def download_report(job_id):
+    job = ScanJob.query.get_or_404(job_id)
+    if job.user_id != current_user.id:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('profile'))
+    if job.status != 'completed' or not job.report_path:
+        flash('Report is not ready yet. Please check back later.', 'info')
+        return redirect(url_for('profile'))
+    return send_file(
+        os.path.join(app.config['UPLOAD_FOLDER'], job.report_path),
+        as_attachment=True,
+        download_name=f"security_report_{job.id}.html"
+    )
 
 # ---------- Test Email Endpoint (optional) ----------
 @app.route('/test-email')
