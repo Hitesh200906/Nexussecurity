@@ -562,6 +562,16 @@ def admin_credit_costs():
         return jsonify({'error': 'Unauthorized'}), 403
     return jsonify(get_credit_costs())
 
+# ---------- Debug Environment Variables ----------
+@app.route('/debug/env')
+def debug_env():
+    import os
+    return jsonify({
+        'JATIN_API_URL': os.getenv('JATIN_API_URL'),
+        'CALLBACK_URL': os.getenv('CALLBACK_URL'),
+        'BASE_URL': os.getenv('BASE_URL')
+    })
+
 # ---------- SCAN REQUEST: TWO PATHS ----------
 @app.route('/api/request_scan', methods=['POST'])
 @login_required
