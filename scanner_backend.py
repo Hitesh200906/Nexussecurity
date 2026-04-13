@@ -7,7 +7,7 @@ This file handles:
 - Storing scan results
 - Serving reports to users
 
-Jatin's API: http://192.168.1.4:5001
+Jatin's API: https://remix-kissing-michael-project.trycloudflare.com
 
 HOW TO USE:
 1. Save this file as scanner_backend.py
@@ -30,7 +30,7 @@ from flask_cors import CORS
 # ========== CONFIGURATION ==========
 
 # Jatin's AI Scanner API (UPDATE THIS)
-JATIN_API_URL = "http://192.168.1.4:5001"  # <-- JATIN'S IP
+JATIN_API_URL = "https://remix-kissing-michael-project.trycloudflare.com"  # <-- JATIN'S IP
 
 # Your website domain
 YOUR_DOMAIN = "https://nexussecurity.onrender.com"  # <-- YOUR DOMAIN
