@@ -168,6 +168,12 @@ def get_credit_costs():
         return admin.credit_costs
     return {"basic": 0, "advanced": 10, "protection_plus": 25}
 
+# ---------- Public Credit Costs (for frontend) ----------
+@app.route('/api/credit-costs')
+def public_credit_costs():
+    """Return current credit costs for all plans (public, no auth)."""
+    return jsonify(get_credit_costs())
+
 # ---------- Helper: check if current user is admin ----------
 def is_admin():
     return current_user.is_authenticated and current_user.email == 'nexussecurity777@gmail.com'
@@ -278,7 +284,7 @@ def send_email_via_brevo(to_email, subject, body):
         raise Exception(f"Brevo API error: {response.text}")
 
 # ---------- Friend's AI Scanner Integration ----------
-JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://trails-sim-ordered-specification.trycloudflare.com')
+JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://monitor-oops-powerpoint-meyer.trycloudflare.com')
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
@@ -286,10 +292,18 @@ def send_to_friend_scanner(scan_id, url, plan, user_email):
         print("❌ JATIN_API_URL is not configured.")
         return False
 
+    # Map internal plan names to external API expected values
+    plan_mapping = {
+        'basic': 'basic',
+        'advanced': 'advanced',
+        'protection_plus': 'ultimate'
+    }
+    external_plan = plan_mapping.get(plan, 'basic')
+
     full_url = f"{JATIN_API_URL}/api/scan/submit"
     payload = {
         'url': url,
-        'plan': plan,
+        'plan': external_plan,
         'scan_id': scan_id,
         'webhook_url': CALLBACK_URL
     }
@@ -799,8 +813,8 @@ def scan_callback():
     data = request.json
     scan_id = data.get('scan_id')
     status = data.get('status')
-    report_html = data.get('report_html')   # NEW: direct HTML content
-    report_url = data.get('report_url')     # fallback: URL to download
+    report_html = data.get('report_html')
+    report_url = data.get('report_url')
 
     if not scan_id:
         return jsonify({'error': 'Missing scan_id'}), 400
@@ -812,11 +826,9 @@ def scan_callback():
     if status == 'completed':
         html_content = None
 
-        # Priority 1: direct HTML from callback
         if report_html:
             html_content = report_html
             print(f"✅ Received direct HTML for scan {scan_id}")
-        # Priority 2: download from report_url
         elif report_url:
             try:
                 resp = requests.get(report_url, timeout=30)
@@ -828,7 +840,6 @@ def scan_callback():
             except Exception as e:
                 print(f"❌ Error downloading report: {e}")
 
-        # Save the report if we have content
         if html_content:
             filename = f"report_{scan_id}.html"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -888,9 +899,6 @@ def test_email():
         return '✅ Email sent successfully! Check your inbox.'
     except Exception as e:
         return f'❌ Error: {str(e)}'
-
-# ========== PAYMENT ENDPOINTS (DISABLED FOR NOW) ==========
-# (keep commented as before)
 
 if __name__ == '__main__':
     app.run(debug=True)

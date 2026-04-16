@@ -15,7 +15,6 @@
         <div class="logo">
             <h1>NEXUS SECURITY</h1>
         </div>
-        <!-- Hamburger button for mobile -->
         <div class="hamburger" id="hamburger">
             <span></span>
             <span></span>
@@ -99,7 +98,9 @@
             <div class="plan-card">
                 <div class="plan-icon"><i class="fas fa-search"></i></div>
                 <h3>Basic Scan</h3>
-                <div class="price">Free</div>
+                <div class="price" data-plan="basic">
+                    <span class="credit-value">0</span> <span class="credit-label">credits</span>
+                </div>
                 <ul class="features">
                     <li><i class="fas fa-check-circle"></i> 2–3 vulnerabilities detected</li>
                     <li><i class="fas fa-check-circle"></i> First 2‑3 pages only</li>
@@ -121,7 +122,9 @@
                 <div class="popular-badge">MOST POPULAR</div>
                 <div class="plan-icon"><i class="fas fa-chart-line"></i></div>
                 <h3>Advanced Scan</h3>
-                <div class="price">₹99 <span>/ scan</span></div>
+                <div class="price" data-plan="advanced">
+                    <span class="credit-value">10</span> <span class="credit-label">credits</span>
+                </div>
                 <ul class="features">
                     <li><i class="fas fa-check-circle"></i> Full website crawl</li>
                     <li><i class="fas fa-check-circle"></i> Medium & low severity bugs</li>
@@ -142,7 +145,9 @@
             <div class="plan-card">
                 <div class="plan-icon"><i class="fas fa-shield-virus"></i></div>
                 <h3>Protection+</h3>
-                <div class="price">₹999 <span>/ scan</span></div>
+                <div class="price" data-plan="protection_plus">
+                    <span class="credit-value">25</span> <span class="credit-label">credits</span>
+                </div>
                 <ul class="features">
                     <li><i class="fas fa-check-circle"></i> Deep‑scan entire website</li>
                     <li><i class="fas fa-check-circle"></i> All vulnerabilities (incl. critical)</li>
@@ -193,7 +198,6 @@
                     <i class="fas fa-envelope-open-text input-icon"></i>
                 </div>
 
-                <!-- Verification Methods Cards -->
                 <div class="verification-methods">
                     <div class="method-card" data-method="email">
                         <input type="radio" name="emailOnSite" value="yes" id="methodEmailBasic" required>
@@ -213,10 +217,8 @@
                     </div>
                 </div>
 
-                <!-- Verify Now button (email method only) -->
                 <button type="button" class="verify-now-btn btn-53" style="display: none; background: #2f9b9b;">Verify Now</button>
 
-                <!-- Manual Code Panel (hidden initially) -->
                 <div class="manual-code-panel" style="display: none;">
                     <div class="code-card">
                         <p><i class="fas fa-shield-alt"></i> Your unique verification code:</p>
@@ -415,7 +417,6 @@
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
 
-    <!-- Modal (for any confirmations) -->
     <div id="questionModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h3>Website Verification</h3>
@@ -427,12 +428,31 @@
         </div>
     </div>
 
-    <!-- Message Box -->
     <div id="messageBox" class="message-box" style="display: none;">
         <span id="messageText"></span>
         <button id="closeMessage" class="close-btn">&times;</button>
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Fetch and update credit prices dynamically from backend
+        async function updateCreditPrices() {
+            try {
+                const response = await fetch('/api/credit-costs');
+                const costs = await response.json();
+                // costs = { basic: 0, advanced: 10, protection_plus: 25 }
+                for (const [plan, credits] of Object.entries(costs)) {
+                    const priceElement = document.querySelector(`.price[data-plan="${plan}"] .credit-value`);
+                    if (priceElement) {
+                        priceElement.textContent = credits;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch credit costs:', err);
+                // Keep default values if fetch fails
+            }
+        }
+        document.addEventListener('DOMContentLoaded', updateCreditPrices);
+    </script>
 </body>
 </html>
