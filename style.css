@@ -2965,6 +2965,166 @@ a.disabled {
     pointer-events: none;
 }
 
+/* ============================================
+   ADMIN PASSCODE PAGE STYLES
+   =========================================== */
+
+.admin-auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.admin-auth-card {
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(16px);
+    border-radius: 2rem;
+    padding: 2.5rem;
+    max-width: 450px;
+    width: 100%;
+    border: 1px solid rgba(47, 155, 155, 0.3);
+    box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.6);
+    text-align: center;
+    animation: cardFadeUp 0.6s ease-out;
+}
+
+@keyframes cardFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.admin-auth-header {
+    margin-bottom: 2rem;
+}
+
+.admin-auth-header i {
+    font-size: 3rem;
+    color: var(--accent, #2f9b9b);
+    margin-bottom: 1rem;
+}
+
+.admin-auth-header h2 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #fff, var(--accent, #2f9b9b));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.admin-auth-header p {
+    color: var(--text-muted, #94a3b8);
+    font-size: 0.9rem;
+}
+
+/* Form group with icon */
+.admin-auth-card .form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.admin-auth-card .form-group input {
+    width: 100%;
+    padding: 0.9rem 1rem 0.9rem 2.8rem;
+    background: rgba(15, 15, 23, 0.8);
+    border: 1px solid var(--border, #1e293b);
+    border-radius: 50px;
+    color: var(--text, #f8fafc);
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.admin-auth-card .form-group input:focus {
+    border-color: var(--accent, #2f9b9b);
+    background: rgba(15, 15, 23, 0.95);
+    box-shadow: 0 0 0 3px rgba(47, 155, 155, 0.2);
+}
+
+.admin-auth-card .input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted, #94a3b8);
+    font-size: 1rem;
+    pointer-events: none;
+    transition: color 0.3s;
+}
+
+.admin-auth-card .form-group input:focus + .input-icon {
+    color: var(--accent, #2f9b9b);
+}
+
+/* Admin auth button */
+.admin-auth-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
+    border: 1px solid var(--accent, #2f9b9b);
+    border-radius: 50px;
+    padding: 0.9rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent, #2f9b9b);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.admin-auth-btn:hover {
+    background: var(--accent, #2f9b9b);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(47, 155, 155, 0.3);
+}
+
+/* Forgot link */
+.admin-forgot-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--text-muted, #94a3b8);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+}
+
+.admin-forgot-link:hover {
+    color: var(--accent, #2f9b9b);
+    text-decoration: underline;
+}
+
+/* Message area */
+.admin-message {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #ef4444;
+    min-height: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .admin-auth-card {
+        padding: 1.8rem;
+        margin: 0 1rem;
+    }
+    .admin-auth-header h2 {
+        font-size: 1.5rem;
+    }
+    .admin-auth-header i {
+        font-size: 2.5rem;
+    }
+}
 
 
 
@@ -3502,3 +3662,4 @@ a.disabled {
   border-radius: 0.5rem;
   padding: 1rem;
 }
+
