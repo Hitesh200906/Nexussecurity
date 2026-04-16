@@ -84,13 +84,6 @@
                                     <span class="scan-plan">{{ scan.plan_type.upper() }}</span>
                                     <span class="company-name">{{ scan.company_name }}</span>
                                 </div>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    {% if is_ready %}
-                                        <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn">Download Report</a>
-                                    {% else %}
-                                        <button class="download-report-btn-disabled disabled-btn" disabled>Download Report</button>
-                                    {% endif %}
-                                </div>
                             </div>
                             <div class="scan-url">{{ scan.target_url }}</div>
                             <div class="scan-meta">
@@ -98,10 +91,17 @@
                                 {% if scan.credits_spent %} • <i class="fas fa-coins"></i> {{ scan.credits_spent }} credits{% endif %}
                             </div>
 
-                            <!-- View Report button (always enabled) -->
-                            <div style="margin-top: 0.8rem;">
-                                <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="{{ 'true' if is_ready else 'false' }}">View Report</button>
-                            </div>
+                             <!-- Buttons container at the bottom -->
+    <div class="scan-buttons">
+        <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="{{ 'true' if is_ready else 'false' }}">
+            View Report
+        </button>
+        {% if is_ready %}
+            <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn">Download Report</a>
+        {% else %}
+            <button class="download-report-btn-disabled disabled-btn" disabled>Download Report</button>
+        {% endif %}
+    </div>
 
                             <!-- Panel toggled by View Report button -->
                             <div id="scan-details-{{ scan.id }}" class="scan-details-panel" style="display: none;">

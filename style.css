@@ -2995,12 +2995,12 @@ a.disabled {
 
 
 
-
 /* ============================================
-   MOBILE RESPONSIVE - HAMBURGER MENU & ENHANCEMENTS
+   FULL MOBILE RESPONSIVE CSS
+   Hamburger Menu | Animated Profile/Admin Buttons | Scan Card Buttons at Bottom
    =========================================== */
 
-/* Hide hamburger on desktop */
+/* ---------- Base Hamburger Styles (hidden on desktop) ---------- */
 .hamburger {
   display: none;
   flex-direction: column;
@@ -3020,309 +3020,27 @@ a.disabled {
   border-radius: 2px;
 }
 
-/* Profile Button Enhancements (Desktop & Mobile) */
-#authButton {
-  background: #000000;
-  border: none;
-  padding: 8px 18px;
-  display: inline-block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  width: auto;
-  text-transform: uppercase;
-  cursor: pointer;
-  transform: skew(-21deg);
-  transition: all 0.5s;
-  color: #ffffff;
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-  border-radius: 0;
-  text-decoration: none;
-}
-#authButton span {
-  display: inline-block;
-  transform: skew(21deg);
-}
-#authButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 100%;
-  left: 0;
-  background: rgb(255, 255, 255);
-  opacity: 0;
-  z-index: -1;
-  transition: all 0.5s;
-}
-#authButton:hover {
-  color: #000000;
-}
-#authButton:hover::before {
-  left: 0;
-  right: 0;
-  opacity: 1;
-}
-
-/* Profile Dashboard Card Styles */
-.dashboard-card {
-  background: rgba(10, 10, 15, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(47, 155, 155, 0.2);
-  border-radius: 24px;
-  transition: all 0.3s;
-}
-.dashboard-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.5);
-}
-.card-title {
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin-bottom: 0.8rem;
-}
-.stat-number {
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #fff, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Credits & Pay Button */
-.credits-card {
-  background: linear-gradient(135deg, #1a1a2a, #0a0a0f);
-  border: 1px solid var(--accent);
-  border-radius: 1rem;
-  padding: 1.5rem;
+/* ---------- Scan Card Buttons Container (always at bottom) ---------- */
+.scan-buttons {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-}
-.pay-btn {
-  position: relative;
-  padding: 12px 24px;
-  font-size: 16px;
-  background: var(--bg-card);
-  color: white;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-}
-.pay-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-  border-color: var(--accent-light);
-}
-.icon-container {
-  position: relative;
-  width: 24px;
-  height: 24px;
-}
-.icon {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 24px;
-  height: 24px;
-  color: var(--accent);
-  opacity: 0;
-  visibility: hidden;
-}
-.default-icon {
-  opacity: 1;
-  visibility: visible;
-}
-.pay-btn:hover .wallet-icon {
-  opacity: 0;
-  visibility: hidden;
-}
-.pay-btn:hover .card-icon {
-  animation: iconRotate 2.5s infinite;
-}
-.pay-btn:hover .payment-icon {
-  animation: iconRotate 2.5s infinite;
-  animation-delay: 0.5s;
-}
-.pay-btn:hover .dollar-icon {
-  animation: iconRotate 2.5s infinite;
-  animation-delay: 1s;
-}
-.pay-btn:hover .check-icon {
-  animation: iconRotate 2.5s infinite;
-  animation-delay: 1.5s;
-}
-.pay-btn:active .check-icon {
-  animation: checkmarkAppear 0.6s ease forwards;
-  visibility: visible;
-}
-@keyframes iconRotate {
-  0% { opacity: 0; visibility: hidden; transform: translateY(10px) scale(0.5); }
-  5% { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-  15% { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-  20% { opacity: 0; visibility: hidden; transform: translateY(-10px) scale(0.5); }
-  100% { opacity: 0; visibility: hidden; transform: translateY(-10px) scale(0.5); }
-}
-@keyframes checkmarkAppear {
-  0% { opacity: 0; transform: scale(0.5) rotate(-45deg); }
-  50% { opacity: 0.5; transform: scale(1.2) rotate(0deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-/* Scan Card & Report Buttons */
-.scan-card {
-  background: rgba(10, 10, 15, 0.6);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 1.2rem;
-  transition: all 0.25s;
-  border: 1px solid var(--border);
-}
-.scan-card:hover {
-  background: rgba(15, 15, 23, 0.8);
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-.scan-plan {
-  background: var(--accent);
-  color: #000;
-  font-weight: 800;
-  padding: 0.2rem 0.6rem;
-  border-radius: 20px;
-  font-size: 0.65rem;
-  letter-spacing: 0.5px;
-}
-.company-name {
-  font-weight: 600;
-  margin-left: 0.5rem;
-  color: white;
-}
-.toggle-report-details,
-.download-report-btn {
-  background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
-  border: 1px solid rgba(47, 155, 155, 0.5);
-  padding: 0.4rem 1rem;
-  border-radius: 30px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--accent);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.toggle-report-details:hover,
-.download-report-btn:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(47, 155, 155, 0.3);
-}
-.download-report-btn-disabled.disabled-btn {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: grayscale(0.1);
-  pointer-events: none;
-}
-.status-badge {
-  background: rgba(47, 155, 155, 0.15);
-  padding: 0.2rem 0.7rem;
-  border-radius: 30px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--accent);
-  border: 1px solid rgba(47, 155, 155, 0.3);
-}
-.status-badge.completed {
-  background: rgba(47, 155, 155, 0.25);
-  color: var(--accent-light);
-}
-.submitted-details {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 0.8rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 0.5rem;
-  font-size: 0.85rem;
-}
-.report-preview iframe {
-  width: 100%;
-  height: 400px;
-  border: none;
-  border-radius: 0.5rem;
-}
-.report-status.not-ready p {
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 1rem;
-  background: rgba(0,0,0,0.2);
-  border-radius: 0.5rem;
+.scan-buttons .toggle-report-details,
+.scan-buttons .download-report-btn,
+.scan-buttons .download-report-btn-disabled {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
 }
 
-/* Admin Button */
-#adminButton {
-  background: #000000;
-  border: none;
-  padding: 8px 18px;
-  display: inline-block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  cursor: pointer;
-  transform: skew(-21deg);
-  transition: all 0.5s;
-  color: #ffffff;
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-  border-radius: 0;
-  text-decoration: none;
-}
-#adminButton span {
-  display: inline-block;
-  transform: skew(21deg);
-}
-#adminButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 100%;
-  left: 0;
-  background: rgb(255, 255, 255);
-  opacity: 0;
-  z-index: -1;
-  transition: all 0.5s;
-}
-#adminButton:hover {
-  color: #000000;
-}
-#adminButton:hover::before {
-  left: 0;
-  right: 0;
-  opacity: 1;
-}
-
-/* Mobile Styles (max-width: 768px) */
+/* ---------- Mobile Styles (max-width: 768px) ---------- */
 @media (max-width: 768px) {
-  /* Navbar adjustments */
+  /* ----- Navbar adjustments ----- */
   .navbar {
     flex-direction: row !important;
     justify-content: space-between !important;
@@ -3345,6 +3063,8 @@ a.disabled {
     position: relative;
     z-index: 102;
   }
+
+  /* ----- Hamburger menu overlay ----- */
   .nav-links {
     position: fixed;
     top: 0;
@@ -3352,8 +3072,8 @@ a.disabled {
     width: 75%;
     max-width: 320px;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(20px);
+    background: rgba(0, 0, 0, 0.98);
+    backdrop-filter: blur(24px);
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -3367,55 +3087,133 @@ a.disabled {
   .nav-links.active {
     right: 0;
   }
+
+  /* ----- Animated menu items (staggered fade-in) ----- */
+  .nav-links a,
+  .nav-links #authButton,
+  .nav-links #adminButton {
+    opacity: 0;
+    transform: translateX(30px);
+    animation: slideInMenu 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+  }
+  .nav-links a:nth-child(1) { animation-delay: 0.05s; }
+  .nav-links a:nth-child(2) { animation-delay: 0.1s; }
+  .nav-links #authButton { animation-delay: 0.15s; }
+  .nav-links #adminButton { animation-delay: 0.2s; }
+
+  @keyframes slideInMenu {
+    0% {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* ----- Regular menu links ----- */
   .nav-links a {
-    font-size: 1.3rem;
-    padding: 0.5rem;
+    font-size: 1.2rem;
+    padding: 12px 0;
     width: 100%;
     text-align: center;
     color: var(--text);
-    border-bottom: 1px solid rgba(47, 155, 155, 0.2);
-    transition: all 0.2s;
+    border-bottom: 1px solid rgba(47, 155, 155, 0.15);
+    transition: all 0.25s;
+    font-weight: 500;
   }
   .nav-links a:hover {
     color: var(--accent);
-    transform: translateX(5px);
+    transform: translateX(8px);
+    border-bottom-color: var(--accent);
   }
-  /* Auth button inside mobile menu */
-  #authButton {
-    margin-top: 1rem;
-    width: 80%;
+
+  /* ----- Professional Profile Button (inside hamburger) ----- */
+  .nav-links #authButton {
+    margin-top: 1.5rem;
+    width: 85%;
     text-align: center;
     transform: skew(0deg) !important;
-    background: var(--accent);
-    color: #000;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    color: #fff;
     border: none;
+    border-radius: 50px !important;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(47, 155, 155, 0.3);
   }
-  #authButton span {
+  .nav-links #authButton span {
     transform: skew(0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
-  #authButton::before {
-    display: none;
+  .nav-links #authButton span::before {
+    content: "👤";
+    font-size: 1.1rem;
+    transition: transform 0.2s;
   }
-  #authButton:hover {
-    background: var(--accent-light);
-    color: #000;
+  .nav-links #authButton:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(47, 155, 155, 0.5);
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
   }
-  /* Admin button inside mobile menu */
-  #adminButton {
+  .nav-links #authButton:hover span::before {
+    transform: scale(1.1);
+  }
+  .nav-links #authButton:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ----- Professional Admin Button (inside hamburger) ----- */
+  .nav-links #adminButton {
     margin-top: 1rem;
-    width: 80%;
+    width: 85%;
     text-align: center;
     transform: skew(0deg) !important;
+    background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 50px !important;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+  }
+  .nav-links #adminButton span {
+    transform: skew(0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .nav-links #adminButton span::before {
+    content: "⚙️";
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+  }
+  .nav-links #adminButton:hover {
+    transform: translateY(-3px) scale(1.02);
     background: var(--accent);
     color: #000;
+    border-color: var(--accent-light);
+    box-shadow: 0 8px 20px rgba(47, 155, 155, 0.4);
   }
-  #adminButton span {
-    transform: skew(0deg);
+  .nav-links #adminButton:hover span::before {
+    transform: rotate(30deg);
   }
-  #adminButton::before {
-    display: none;
+  .nav-links #adminButton:active {
+    transform: translateY(0) scale(0.98);
   }
-  /* Hamburger animation */
+
+  /* ----- Hamburger animation (open state) ----- */
   .hamburger.active span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
   }
@@ -3429,7 +3227,21 @@ a.disabled {
     overflow: hidden;
   }
 
-  /* General mobile adjustments */
+  /* ----- Scan card buttons: stack vertically and full width ----- */
+  .scan-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .scan-buttons .toggle-report-details,
+  .scan-buttons .download-report-btn,
+  .scan-buttons .download-report-btn-disabled {
+    width: 100%;
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  /* ----- General mobile adjustments ----- */
   .scan-types {
     gap: 1rem;
     padding: 0 1rem;
@@ -3496,7 +3308,8 @@ a.disabled {
     padding: 1.5rem;
     margin: 0 1rem;
   }
-  /* Profile Dashboard Mobile */
+
+  /* ----- Profile dashboard mobile ----- */
   .profile-dashboard {
     padding: 0 1rem;
   }
@@ -3526,10 +3339,10 @@ a.disabled {
   }
   .toggle-report-details,
   .download-report-btn {
-    padding: 0.3rem 0.8rem;
-    font-size: 0.7rem;
+    /* already handled above */
   }
-  /* Admin panel */
+
+  /* ----- Admin panel responsive ----- */
   .admin-container {
     padding: 0 1rem;
   }
@@ -3546,7 +3359,8 @@ a.disabled {
   .search-box {
     width: 100%;
   }
-  /* Verification methods */
+
+  /* ----- Verification methods ----- */
   .verification-methods {
     flex-direction: column;
   }
@@ -3566,7 +3380,8 @@ a.disabled {
     width: 100%;
     justify-content: center;
   }
-  /* Toast messages */
+
+  /* ----- Toast messages ----- */
   .message-toast {
     left: 20px;
     right: 20px;
@@ -3580,7 +3395,8 @@ a.disabled {
   .message-toast .message-text {
     font-size: 0.85rem;
   }
-  /* Modal */
+
+  /* ----- Modal adjustments ----- */
   .modal-message-card {
     width: 90%;
     padding: 1.5rem;
@@ -3592,7 +3408,8 @@ a.disabled {
   .modal-message-card h3 {
     font-size: 1.3rem;
   }
-  /* Performance optimizations */
+
+  /* ----- Performance optimizations (disable heavy animations on mobile) ----- */
   .points_wrapper .point {
     display: none;
   }
@@ -3612,7 +3429,7 @@ a.disabled {
   }
 }
 
-/* Small devices (max-width: 480px) */
+/* ---------- Extra small devices (max-width: 480px) ---------- */
 @media (max-width: 480px) {
   .navbar {
     padding: 0.5rem 0.8rem !important;
@@ -3724,215 +3541,34 @@ a.disabled {
     padding: 0.3rem 0.8rem;
     font-size: 0.65rem;
   }
-}
-/* ============================================
-   MOBILE RESPONSIVE - PROFILE PAGE (View Report & Download Report at bottom)
-   =========================================== */
-
-@media (max-width: 768px) {
-    /* Scan card adjustments */
-    .scan-card {
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Scan header: stack plan and download button vertically */
-    .scan-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-
-    .scan-header > div:first-child {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-    /* View Report button - full width on mobile */
-    .toggle-report-details {
-        width: 100%;
-        justify-content: center;
-        margin-top: 0.5rem;
-        padding: 0.6rem;
-        font-size: 0.85rem;
-    }
-
-    /* Download Report button - full width when inside panel */
-    .download-report-btn {
-        width: 100%;
-        justify-content: center;
-        padding: 0.6rem;
-        font-size: 0.85rem;
-        margin-top: 0.5rem;
-    }
-
-    /* Disabled download button */
-    .download-report-btn-disabled {
-        width: 100%;
-        justify-content: center;
-        padding: 0.6rem;
-        font-size: 0.85rem;
-        text-align: center;
-    }
-
-    /* Scan details panel (the box that appears after clicking View Report) */
-    .scan-details-panel {
-        margin-top: 1.2rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border);
-    }
-
-    /* Submitted details grid - single column */
-    .submitted-details {
-        padding: 0.8rem;
-    }
-    .details-grid {
-        grid-template-columns: 1fr;
-        gap: 0.6rem;
-    }
-    .details-grid div {
-        font-size: 0.8rem;
-        word-break: break-word;
-    }
-
-    /* Report preview iframe - smaller height on mobile */
-    .report-preview {
-        margin-top: 1rem;
-        padding: 0.5rem;
-    }
-    .report-preview iframe {
-        height: 300px;
-    }
-
-    /* Report status messages */
-    .report-status p {
-        font-size: 0.85rem;
-        padding: 0.8rem;
-    }
-
-    /* Ensure buttons inside the panel are stacked at the bottom */
-    .scan-details-panel .download-report-btn,
-    .scan-details-panel .toggle-report-details {
-        margin-top: 1rem;
-    }
-
-    /* Optional: Hide Report button inside the panel (if you have one) */
-    .hide-report-btn {
-        width: 100%;
-        justify-content: center;
-        margin-top: 1rem;
-        background: rgba(47, 155, 155, 0.2);
-        border-color: var(--accent);
-    }
-
-    /* Credits card and pay button */
-    .credits-card {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    .pay-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* Dashboard cards */
-    .dashboard-grid {
-        gap: 1rem;
-    }
-    .dashboard-card {
-        padding: 1rem;
-    }
-    .stat-number {
-        font-size: 1.8rem;
-    }
-    .card-title {
-        font-size: 1rem;
-    }
-
-    /* Welcome section */
-    .welcome-section h1 {
-        font-size: 1.5rem;
-    }
-    .welcome-section p {
-        font-size: 0.9rem;
-        word-break: break-all;
-    }
-
-    /* Logout button */
-    .logout-container {
-        margin-top: 1.5rem;
-    }
-    .btn-logout {
-        width: 100%;
-        justify-content: center;
-        padding: 0.7rem;
-    }
-
-    /* Scan meta info */
-    .scan-meta {
-        font-size: 0.7rem;
-        margin-top: 0.3rem;
-    }
-
-    /* Company name and plan badge */
-    .scan-plan {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.6rem;
-    }
-    .company-name {
-        font-size: 0.8rem;
-        margin-left: 0.5rem;
-    }
-    .scan-url {
-        font-size: 0.75rem;
-        word-break: break-all;
-    }
+  .scan-buttons .toggle-report-details,
+  .scan-buttons .download-report-btn,
+  .scan-buttons .download-report-btn-disabled {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .details-grid div {
+    font-size: 0.75rem;
+  }
+  .report-preview iframe {
+    height: 220px;
+  }
+  .welcome-section h1 {
+    font-size: 1.2rem;
+  }
+  .btn-logout {
+    font-size: 0.9rem;
+  }
 }
 
-/* Extra small devices (max-width: 480px) */
-@media (max-width: 480px) {
-    .scan-card {
-        padding: 0.8rem;
-    }
-    .toggle-report-details,
-    .download-report-btn {
-        font-size: 0.75rem;
-        padding: 0.5rem;
-    }
-    .details-grid div {
-        font-size: 0.75rem;
-    }
-    .report-preview iframe {
-        height: 220px;
-    }
-    .stat-number {
-        font-size: 1.5rem;
-    }
-    .welcome-section h1 {
-        font-size: 1.2rem;
-    }
-    .btn-logout {
-        font-size: 0.9rem;
-    }
-    .submitted-details h4 {
-        font-size: 0.9rem;
-    }
-}
-
-/* Ensure the panel opens smoothly */
+/* ---------- Helper classes ---------- */
 .scan-details-panel {
-    transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
-
-/* When report is not ready, show a nice message */
 .report-status.not-ready p {
-    text-align: center;
-    font-style: italic;
-    background: rgba(0,0,0,0.3);
-    border-radius: 0.5rem;
-    padding: 1rem;
+  text-align: center;
+  font-style: italic;
+  background: rgba(0,0,0,0.3);
+  border-radius: 0.5rem;
+  padding: 1rem;
 }
