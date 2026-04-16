@@ -2906,3 +2906,60 @@ a.disabled {
     background-clip: text;
     color: transparent;
 }
+
+/* ===== Download Report Button - Enabled State ===== */
+.download-report-btn {
+    background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
+    border: 1px solid rgba(47, 155, 155, 0.5);
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #2f9b9b;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.download-report-btn:hover {
+    background: #2f9b9b;
+    color: #fff;
+    border-color: #2f9b9b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(47, 155, 155, 0.3);
+}
+
+.download-report-btn i {
+    font-size: 0.7rem;
+}
+
+/* ===== Download Report Button - Disabled State ===== */
+.download-report-btn:disabled,
+.download-report-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(0.1);
+    pointer-events: none;
+    border-color: rgba(47, 155, 155, 0.3);
+    color: #5a7a7a;
+}
+
+/* Alternative disabled class used in your HTML */
+.download-report-btn-disabled {
+    background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
+    border: 1px solid rgba(47, 155, 155, 0.3);
+    padding: 0.4rem 1rem;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #5a7a7a;
+    opacity: 0.6;
+    cursor: not-allowed;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    pointer-events: none;
+}
