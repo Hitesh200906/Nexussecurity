@@ -608,7 +608,6 @@ def request_scan():
                 db.session.commit()
                 try:
                     verify_url = url_for('verify_scan', token=token, _external=True)
-                    # Updated email body: no need to be logged in
                     email_body = f"""
                     Hello,<br><br>
                     You requested a security scan for {website_url} ({plan} plan).<br><br>
@@ -660,7 +659,6 @@ def verify_scan(token):
     if not pending:
         return "<h2>Invalid or expired verification link.</h2><p>Please request a new scan.</p>", 400
 
-    # Get the user who originally requested the scan
     user = User.query.get(pending.user_id)
     if not user:
         return "<h2>User not found.</h2><p>Please contact support.</p>", 400
@@ -668,7 +666,6 @@ def verify_scan(token):
     prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
     scan_id = hashlib.md5(f"{pending.website_url}{pending.user_email}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
-    # Deduct credits from the original user (not current_user)
     costs = get_credit_costs()
     cost = costs.get(pending.plan_type, 0)
     if cost > 0 and (user.credits or 0) < cost:
@@ -678,7 +675,6 @@ def verify_scan(token):
         user.credits -= cost
         db.session.commit()
 
-    # Create the scan job
     job = ScanJob(
         user_id=pending.user_id,
         target_url=pending.website_url,
@@ -696,12 +692,9 @@ def verify_scan(token):
     )
     db.session.add(job)
     db.session.commit()
-
-    # Mark pending scan as used
     pending.used = True
     db.session.commit()
 
-    # Send to friend's scanner
     remote_success = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
     if not remote_success:
         job.status = 'failed'
@@ -710,13 +703,10 @@ def verify_scan(token):
     else:
         failure_msg = ""
 
-    # Determine response based on login status
     if current_user.is_authenticated and current_user.id == pending.user_id:
-        # User is logged in and owns the scan – redirect to profile
         flash('Scan confirmed! The AI scanner will process your request.' + (' ' + failure_msg if failure_msg else ''), 'success' if remote_success else 'danger')
         return redirect(url_for('profile'))
     else:
-        # User not logged in (or different user) – show confirmation page
         html = f"""
         <!DOCTYPE html>
         <html>
@@ -768,7 +758,6 @@ def verify_code():
             prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
             scan_id = hashlib.md5(f"{fd['website_url']}{fd['user_email']}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
-            # Deduct credits using dynamic costs
             if not deduct_credits(current_user, fd['plan']):
                 return jsonify({'success': False, 'message': 'Insufficient credits. Please buy credits.'}), 400
 
@@ -804,13 +793,14 @@ def verify_code():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
-# ---------- Callback from Friend's Scanner ----------
+# ---------- Callback from Friend's Scanner (UPDATED: accepts direct HTML) ----------
 @app.route('/api/scan-callback', methods=['POST'])
 def scan_callback():
     data = request.json
     scan_id = data.get('scan_id')
-    report_url = data.get('report_url')
     status = data.get('status')
+    report_html = data.get('report_html')   # NEW: direct HTML content
+    report_url = data.get('report_url')     # fallback: URL to download
 
     if not scan_id:
         return jsonify({'error': 'Missing scan_id'}), 400
@@ -819,30 +809,46 @@ def scan_callback():
     if not job:
         return jsonify({'error': 'Scan job not found'}), 404
 
-    if status == 'completed' and report_url:
-        try:
-            resp = requests.get(report_url, timeout=30)
-            if resp.status_code == 200:
-                filename = f"report_{scan_id}.html"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    f.write(resp.text)
-                job.report_path = filename
-                job.status = 'completed'
-                job.completed_at = datetime.utcnow()
-                db.session.commit()
-                print(f"✅ Report saved for scan {scan_id}")
-                return jsonify({'status': 'ok'})
-            else:
-                print(f"❌ Failed to download report, HTTP {resp.status_code}")
-        except Exception as e:
-            print(f"❌ Callback error: {e}")
-    else:
-        print(f"⚠️ Scan {scan_id} reported status: {status}")
+    if status == 'completed':
+        html_content = None
 
-    job.status = status or 'failed'
-    db.session.commit()
-    return jsonify({'status': 'updated'})
+        # Priority 1: direct HTML from callback
+        if report_html:
+            html_content = report_html
+            print(f"✅ Received direct HTML for scan {scan_id}")
+        # Priority 2: download from report_url
+        elif report_url:
+            try:
+                resp = requests.get(report_url, timeout=30)
+                if resp.status_code == 200:
+                    html_content = resp.text
+                    print(f"✅ Downloaded report from {report_url}")
+                else:
+                    print(f"❌ Failed to download report, HTTP {resp.status_code}")
+            except Exception as e:
+                print(f"❌ Error downloading report: {e}")
+
+        # Save the report if we have content
+        if html_content:
+            filename = f"report_{scan_id}.html"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            job.report_path = filename
+            job.status = 'completed'
+            job.completed_at = datetime.utcnow()
+            db.session.commit()
+            print(f"✅ Report saved for scan {scan_id}")
+            return jsonify({'status': 'ok'})
+        else:
+            job.status = 'failed'
+            db.session.commit()
+            return jsonify({'error': 'No report content received'}), 500
+    else:
+        job.status = status or 'failed'
+        db.session.commit()
+        print(f"⚠️ Scan {scan_id} reported status: {status}")
+        return jsonify({'status': 'updated'})
 
 # ---------- View Report ----------
 @app.route('/view_report/<int:job_id>')
