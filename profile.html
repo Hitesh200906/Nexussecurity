@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>My Profile – Nexus Security</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,8 +12,16 @@
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
     <nav class="navbar">
-        <div class="logo"><h1>NEXUS SECURITY</h1></div>
-        <div class="nav-links">
+        <div class="logo">
+            <h1>NEXUS SECURITY</h1>
+        </div>
+        <!-- Hamburger button for mobile -->
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="nav-links" id="navLinks">
             <a href="index.html">Home</a>
             <a href="index.html#plans">Plans</a>
             <div id="authButtonContainer"></div>
@@ -148,7 +156,38 @@
     <script src="script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle View Report button clicks (always enabled)
+            // ========== HAMBURGER MENU (if script.js didn't already handle it) ==========
+            const hamburger = document.getElementById('hamburger');
+            const navLinks = document.getElementById('navLinks');
+            if (hamburger && navLinks) {
+                hamburger.addEventListener('click', () => {
+                    navLinks.classList.toggle('active');
+                    hamburger.classList.toggle('active');
+                    document.body.classList.toggle('menu-open');
+                });
+                // Close menu when a link is clicked
+                const navLinkItems = navLinks.querySelectorAll('a');
+                navLinkItems.forEach(link => {
+                    link.addEventListener('click', () => {
+                        navLinks.classList.remove('active');
+                        hamburger.classList.remove('active');
+                        document.body.classList.remove('menu-open');
+                    });
+                });
+                // Also close when clicking the auth button container's content
+                const authContainer = navLinks.querySelector('#authButtonContainer');
+                if (authContainer) {
+                    authContainer.addEventListener('click', (e) => {
+                        if (e.target.closest('a')) {
+                            navLinks.classList.remove('active');
+                            hamburger.classList.remove('active');
+                            document.body.classList.remove('menu-open');
+                        }
+                    });
+                }
+            }
+
+            // ========== Handle View Report button clicks ==========
             document.querySelectorAll('.toggle-report-details').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const scanId = btn.getAttribute('data-scan-id');
@@ -163,7 +202,7 @@
                 });
             });
 
-            // Optional: handle disabled download buttons (if any) - show message on click
+            // ========== Handle disabled download buttons ==========
             const disabledDownloadBtns = document.querySelectorAll('.download-report-btn-disabled');
             if (disabledDownloadBtns.length) {
                 function showToast(message, isError = true) {
