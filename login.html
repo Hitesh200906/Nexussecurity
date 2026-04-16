@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Additional styles for the message box (in case style.css doesn't have them) */
         .message-toast {
             position: fixed;
             bottom: 30px;
@@ -54,20 +53,11 @@
             color: #fff;
         }
         @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         @keyframes slideOut {
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
+            to { transform: translateX(100%); opacity: 0; }
         }
     </style>
 </head>
@@ -78,7 +68,6 @@
         <div class="logo">
             <h1>NEXUS SECURITY</h1>
         </div>
-        <!-- Hamburger button for mobile -->
         <div class="hamburger" id="hamburger">
             <span></span>
             <span></span>
@@ -155,6 +144,10 @@
                     <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required>
                     <i class="fas fa-check-circle input-icon"></i>
                 </div>
+                <div id="verificationCodeGroup" style="display: none;" class="form-group">
+                    <input type="text" id="verificationCode" placeholder="Enter 6-digit code" required>
+                    <i class="fas fa-key input-icon"></i>
+                </div>
                 <button id="doSignup" class="btn-53" data-plan="signup">
                     <div class="original">SIGN UP</div>
                     <div class="letters">
@@ -174,12 +167,11 @@
         <p>© 2026 Nexus Security. All rights reserved. | Protecting your digital assets.</p>
     </footer>
 
-    <!-- Message Toast Container -->
     <div id="messageToastContainer"></div>
 
     <script src="script.js"></script>
     <script>
-        // Particle background animation (unchanged)
+        // Particle background animation
         const canvas = document.getElementById('particleCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -220,9 +212,7 @@
         function initParticles() {
             particles = [];
             const count = Math.min(150, Math.floor(canvas.width * canvas.height / 8000));
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle());
-            }
+            for (let i = 0; i < count; i++) particles.push(new Particle());
         }
 
         function animateParticles() {
@@ -236,15 +226,14 @@
 
         initParticles();
         animateParticles();
-
         window.addEventListener('beforeunload', () => {
             if (animationId) cancelAnimationFrame(animationId);
         });
 
         const loginTab = document.getElementById('loginTab');
         const signupTab = document.getElementById('signupTab');
-        const loginForm = document.getElementById('loginForm');
-        const signupForm = document.getElementById('signupForm');
+        const loginFormDiv = document.getElementById('loginForm');
+        const signupFormDiv = document.getElementById('signupForm');
         const indicator = document.querySelector('.tab-indicator');
 
         function updateIndicator(activeTab) {
@@ -260,35 +249,30 @@
             if (tab === 'login') {
                 loginTab.classList.add('active');
                 signupTab.classList.remove('active');
-                loginForm.classList.add('active');
-                signupForm.classList.remove('active');
+                loginFormDiv.classList.add('active');
+                signupFormDiv.classList.remove('active');
                 updateIndicator('login');
             } else {
                 signupTab.classList.add('active');
                 loginTab.classList.remove('active');
-                signupForm.classList.add('active');
-                loginForm.classList.remove('active');
+                signupFormDiv.classList.add('active');
+                loginFormDiv.classList.remove('active');
                 updateIndicator('signup');
             }
         }
 
         loginTab.addEventListener('click', () => setActiveTab('login'));
         signupTab.addEventListener('click', () => setActiveTab('signup'));
-
-        window.addEventListener('load', () => {
-            updateIndicator('login');
-        });
+        window.addEventListener('load', () => updateIndicator('login'));
         window.addEventListener('resize', () => {
-            const activeTab = loginTab.classList.contains('active') ? 'login' : 'signup';
-            updateIndicator(activeTab);
+            const active = loginTab.classList.contains('active') ? 'login' : 'signup';
+            updateIndicator(active);
         });
 
         // ----- Styled Message Box Function -----
         function showStyledMessage(message, isError = false) {
             const container = document.getElementById('messageToastContainer');
             if (!container) return;
-
-            // Create toast element
             const toast = document.createElement('div');
             toast.className = `message-toast ${isError ? 'error' : 'success'}`;
             const icon = isError ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
@@ -298,15 +282,11 @@
                 <button class="close-message"><i class="fas fa-times"></i></button>
             `;
             container.appendChild(toast);
-
-            // Close button functionality
             const closeBtn = toast.querySelector('.close-message');
             closeBtn.addEventListener('click', () => {
                 toast.style.animation = 'slideOut 0.3s ease-out forwards';
                 setTimeout(() => toast.remove(), 300);
             });
-
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.style.animation = 'slideOut 0.3s ease-out forwards';
@@ -315,123 +295,156 @@
             }, 5000);
         }
 
-        // ----- Override login and signup with styled messages and redirect to home -----
-        (function() {
-            // Login button
-            const loginBtn = document.getElementById('doLogin');
-            if (loginBtn) {
-                const newLoginBtn = loginBtn.cloneNode(true);
-                loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
-                
-                newLoginBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    const email = document.getElementById('loginEmail').value.trim();
-                    const password = document.getElementById('loginPassword').value;
-                    
-                    if (!email || !password) {
-                        showStyledMessage('Please fill in both fields.', true);
-                        return;
-                    }
-                    
-                    const originalHTML = newLoginBtn.innerHTML;
-                    newLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-                    newLoginBtn.disabled = true;
-                    
-                    try {
-                        const response = await fetch('/api/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, password })
-                        });
-                        const data = await response.json();
-                        
-                        if (response.ok && data.success) {
-                            showStyledMessage('✅ Login successful! Redirecting...');
-                            setTimeout(() => {
-                                window.location.href = '/index.html?t=' + Date.now();
-                            }, 1000);
-                        } else {
-                            showStyledMessage(data.message || 'Login failed.', true);
-                            newLoginBtn.innerHTML = originalHTML;
-                            newLoginBtn.disabled = false;
-                            if (data.message && data.message.includes('No account found')) {
-                                const signupTabBtn = document.getElementById('signupTab');
-                                if (signupTabBtn) signupTabBtn.click();
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Login error:', error);
-                        showStyledMessage('Network error. Please try again.', true);
-                        newLoginBtn.innerHTML = originalHTML;
-                        newLoginBtn.disabled = false;
-                    }
-                });
-            }
+        // ----- Signup Flow with Email Verification -----
+        let pendingVerification = false;
+        const signupBtn = document.getElementById('doSignup');
+        if (signupBtn) {
+            const newSignupBtn = signupBtn.cloneNode(true);
+            signupBtn.parentNode.replaceChild(newSignupBtn, signupBtn);
             
-            // Signup button
-            const signupBtn = document.getElementById('doSignup');
-            if (signupBtn) {
-                const newSignupBtn = signupBtn.cloneNode(true);
-                signupBtn.parentNode.replaceChild(newSignupBtn, signupBtn);
+            newSignupBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
                 
-                newSignupBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    const name = document.getElementById('signupName').value.trim();
-                    const email = document.getElementById('signupEmail').value.trim();
-                    const password = document.getElementById('signupPassword').value;
-                    const confirm = document.getElementById('signupConfirmPassword').value;
-                    
-                    if (!name || !email || !password) {
-                        showStyledMessage('Please fill in all fields.', true);
+                // If we are already in verification step
+                if (pendingVerification) {
+                    const code = document.getElementById('verificationCode').value.trim();
+                    if (!code) {
+                        showStyledMessage('Please enter the verification code.', true);
                         return;
                     }
-                    if (password !== confirm) {
-                        showStyledMessage('Passwords do not match.', true);
-                        return;
-                    }
-                    
                     const originalHTML = newSignupBtn.innerHTML;
-                    newSignupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
+                    newSignupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
                     newSignupBtn.disabled = true;
-                    
                     try {
-                        const response = await fetch('/api/register', {
+                        const response = await fetch('/api/verify-email-code', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name, email, password })
+                            body: JSON.stringify({ code })
                         });
                         const data = await response.json();
-                        
-                        if (response.ok && data.success) {
-                            showStyledMessage('✅ Account created! Redirecting...');
+                        if (data.success) {
+                            showStyledMessage('✅ Account verified! Redirecting...');
                             setTimeout(() => {
                                 window.location.href = '/index.html?t=' + Date.now();
                             }, 1000);
                         } else {
-                            showStyledMessage(data.message || 'Registration failed.', true);
+                            showStyledMessage(data.message || 'Verification failed.', true);
                             newSignupBtn.innerHTML = originalHTML;
                             newSignupBtn.disabled = false;
                         }
-                    } catch (error) {
-                        console.error('Registration error:', error);
-                        showStyledMessage('An error occurred. Please try again.', true);
+                    } catch (err) {
+                        showStyledMessage('Network error. Please try again.', true);
                         newSignupBtn.innerHTML = originalHTML;
                         newSignupBtn.disabled = false;
                     }
-                });
-            }
-            
-            // Google login buttons stay as they are (redirect to /login)
-            const googleBtns = [document.getElementById('googleLogin'), document.getElementById('googleSignup')];
-            googleBtns.forEach(btn => {
-                if (btn && !btn.hasAttribute('data-listener')) {
-                    btn.setAttribute('data-listener', 'true');
-                    btn.addEventListener('click', () => {
-                        window.location.href = '/login';
+                    return;
+                }
+                
+                // First step: send signup data and get code
+                const name = document.getElementById('signupName').value.trim();
+                const email = document.getElementById('signupEmail').value.trim();
+                const password = document.getElementById('signupPassword').value;
+                const confirm = document.getElementById('signupConfirmPassword').value;
+                
+                if (!name || !email || !password) {
+                    showStyledMessage('Please fill in all fields.', true);
+                    return;
+                }
+                if (password !== confirm) {
+                    showStyledMessage('Passwords do not match.', true);
+                    return;
+                }
+                
+                const originalHTML = newSignupBtn.innerHTML;
+                newSignupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending code...';
+                newSignupBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, password })
                     });
+                    const data = await response.json();
+                    if (data.success && data.requires_verification) {
+                        showStyledMessage('Verification code sent to your email. Please enter it below.');
+                        // Show the verification code input
+                        const codeGroup = document.getElementById('verificationCodeGroup');
+                        if (codeGroup) codeGroup.style.display = 'block';
+                        newSignupBtn.innerHTML = '<i class="fas fa-check"></i> Verify Code';
+                        newSignupBtn.disabled = false;
+                        pendingVerification = true;
+                    } else {
+                        showStyledMessage(data.message || 'Registration failed.', true);
+                        newSignupBtn.innerHTML = originalHTML;
+                        newSignupBtn.disabled = false;
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    showStyledMessage('An error occurred. Please try again.', true);
+                    newSignupBtn.innerHTML = originalHTML;
+                    newSignupBtn.disabled = false;
                 }
             });
-        })();
+        }
+
+        // ----- Login Button -----
+        const loginBtn = document.getElementById('doLogin');
+        if (loginBtn) {
+            const newLoginBtn = loginBtn.cloneNode(true);
+            loginBtn.parentNode.replaceChild(newLoginBtn, loginBtn);
+            
+            newLoginBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value.trim();
+                const password = document.getElementById('loginPassword').value;
+                if (!email || !password) {
+                    showStyledMessage('Please fill in both fields.', true);
+                    return;
+                }
+                const originalHTML = newLoginBtn.innerHTML;
+                newLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                newLoginBtn.disabled = true;
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        showStyledMessage('✅ Login successful! Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = '/index.html?t=' + Date.now();
+                        }, 1000);
+                    } else {
+                        showStyledMessage(data.message || 'Login failed.', true);
+                        newLoginBtn.innerHTML = originalHTML;
+                        newLoginBtn.disabled = false;
+                        if (data.message && data.message.includes('No account found')) {
+                            const signupTabBtn = document.getElementById('signupTab');
+                            if (signupTabBtn) signupTabBtn.click();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showStyledMessage('Network error. Please try again.', true);
+                    newLoginBtn.innerHTML = originalHTML;
+                    newLoginBtn.disabled = false;
+                }
+            });
+        }
+        
+        // Google login buttons
+        const googleBtns = [document.getElementById('googleLogin'), document.getElementById('googleSignup')];
+        googleBtns.forEach(btn => {
+            if (btn && !btn.hasAttribute('data-listener')) {
+                btn.setAttribute('data-listener', 'true');
+                btn.addEventListener('click', () => {
+                    window.location.href = '/login';
+                });
+            }
+        });
     </script>
 </body>
 </html>
