@@ -277,42 +277,39 @@ def send_email_via_brevo(to_email, subject, body):
     if response.status_code not in (200, 201):
         raise Exception(f"Brevo API error: {response.text}")
 
-# ---------- Friend's AI Scanner Integration (with debug logging) ----------
-JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://nexus-scanner-9w6p.onrender.com')
+# ---------- Friend's AI Scanner Integration ----------
+JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://monitor-oops-powerpoint-meyer.trycloudflare.com')
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
+    if not JATIN_API_URL:
+        print("❌ JATIN_API_URL is not configured.")
+        return False
+
     full_url = f"{JATIN_API_URL}/api/scan/submit"
-    print(f"🔍 Sending scan to: {full_url}")
-    print(f"🔍 Payload: {{'url': {url}, 'plan': {plan}, 'scan_id': {scan_id}, 'webhook_url': {CALLBACK_URL}}}")
+    payload = {
+        'url': url,
+        'plan': plan,
+        'scan_id': scan_id,
+        'webhook_url': CALLBACK_URL
+    }
+    print(f"📤 Sending scan to {full_url} with payload: {payload}")
     try:
-        response = requests.post(
-            full_url,
-            json={
-                'url': url,
-                'plan': plan,
-                'scan_id': scan_id,
-                'webhook_url': CALLBACK_URL
-            },
-            timeout=10
-        )
-        print(f"✅ Scanner response status: {response.status_code}")
-        print(f"✅ Scanner response body: {response.text}")
+        response = requests.post(full_url, json=payload, timeout=15)
+        print(f"✅ Scanner responded with status {response.status_code}")
         if response.status_code == 200:
             data = response.json()
-            return data.get('scan_id', scan_id)
+            print(f"✅ Scanner accepted scan, remote_scan_id: {data.get('scan_id')}")
+            return True
         else:
-            print(f"❌ Scanner returned error: {response.text}")
-            return None
+            print(f"❌ Scanner error: {response.text}")
+            return False
     except requests.exceptions.Timeout:
-        print("❌ Request timed out after 10 seconds")
-        return None
-    except requests.exceptions.ConnectionError as e:
-        print(f"❌ Connection error: {e}")
-        return None
+        print("❌ Request to scanner timed out after 15 seconds")
+        return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
-        return None
+        print(f"❌ Unexpected error calling scanner: {e}")
+        return False
 
 # ---------- Credit Deduction Helper (uses dynamic costs) ----------
 def deduct_credits(user, plan_type):
@@ -682,9 +679,9 @@ def verify_scan(token):
     pending.used = True
     db.session.commit()
 
-    remote_scan_id = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
-    if remote_scan_id:
-        print(f"Scan {scan_id} queued with friend's scanner as {remote_scan_id}")
+    remote_success = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
+    if remote_success:
+        print(f"Scan {scan_id} queued with friend's scanner")
         flash('Scan confirmed! The AI scanner will process your request.', 'success')
     else:
         job.status = 'failed'
@@ -741,8 +738,8 @@ def verify_code():
             db.session.add(job)
             db.session.commit()
 
-            remote_scan_id = send_to_friend_scanner(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
-            if remote_scan_id:
+            remote_success = send_to_friend_scanner(scan_id, fd['website_url'], fd['plan'], fd['user_email'])
+            if remote_success:
                 return jsonify({'success': True, 'message': '✅ Verification successful! Scan queued.', 'job_id': job.id})
             else:
                 job.status = 'failed'
@@ -770,30 +767,28 @@ def scan_callback():
 
     if status == 'completed' and report_url:
         try:
-            response = requests.get(report_url, timeout=30)
-            if response.status_code == 200:
+            resp = requests.get(report_url, timeout=30)
+            if resp.status_code == 200:
                 filename = f"report_{scan_id}.html"
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 with open(filepath, 'w', encoding='utf-8') as f:
-                    f.write(response.text)
+                    f.write(resp.text)
                 job.report_path = filename
                 job.status = 'completed'
                 job.completed_at = datetime.utcnow()
                 db.session.commit()
+                print(f"✅ Report saved for scan {scan_id}")
                 return jsonify({'status': 'ok'})
             else:
-                job.status = 'failed'
-                db.session.commit()
-                return jsonify({'error': 'Failed to download report'}), 500
+                print(f"❌ Failed to download report, HTTP {resp.status_code}")
         except Exception as e:
-            print(f"Callback error: {e}")
-            job.status = 'failed'
-            db.session.commit()
-            return jsonify({'error': str(e)}), 500
+            print(f"❌ Callback error: {e}")
     else:
-        job.status = status or 'failed'
-        db.session.commit()
-        return jsonify({'status': 'updated'})
+        print(f"⚠️ Scan {scan_id} reported status: {status}")
+
+    job.status = status or 'failed'
+    db.session.commit()
+    return jsonify({'status': 'updated'})
 
 # ---------- View Report ----------
 @app.route('/view_report/<int:job_id>')
@@ -808,7 +803,7 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Download Report (NEW) ----------
+# ---------- Download Report ----------
 @app.route('/download_report/<int:job_id>')
 @login_required
 def download_report(job_id):
@@ -835,71 +830,7 @@ def test_email():
         return f'❌ Error: {str(e)}'
 
 # ========== PAYMENT ENDPOINTS (DISABLED FOR NOW) ==========
-# To enable Razorpay, uncomment the code below, set CREDIT_COSTS to non‑zero values,
-# and add RAZORPAY_KEY_ID & RAZORPAY_KEY_SECRET to your environment variables.
-
-"""
-import razorpay
-RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
-RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
-razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-
-@app.route('/api/create-order', methods=['POST'])
-@login_required
-def create_order():
-    data = request.json
-    amount = data.get('amount')
-    credits = data.get('credits')
-    if not amount or not credits:
-        return jsonify({'error': 'Invalid request'}), 400
-    order_data = {
-        'amount': int(amount * 100),
-        'currency': 'INR',
-        'receipt': f"credits_{current_user.id}_{int(datetime.utcnow().timestamp())}"
-    }
-    order = razorpay_client.order.create(data=order_data)
-    tx = Transaction(
-        user_id=current_user.id,
-        amount=amount,
-        credits_added=credits,
-        razorpay_order_id=order['id'],
-        status='created'
-    )
-    db.session.add(tx)
-    db.session.commit()
-    return jsonify({
-        'order_id': order['id'],
-        'amount': amount,
-        'currency': 'INR',
-        'key': RAZORPAY_KEY_ID
-    })
-
-@app.route('/api/verify-payment', methods=['POST'])
-@login_required
-def verify_payment():
-    data = request.json
-    razorpay_order_id = data.get('order_id')
-    razorpay_payment_id = data.get('payment_id')
-    razorpay_signature = data.get('signature')
-    try:
-        params_dict = {
-            'razorpay_order_id': razorpay_order_id,
-            'razorpay_payment_id': razorpay_payment_id,
-            'razorpay_signature': razorpay_signature
-        }
-        razorpay_client.utility.verify_payment_signature(params_dict)
-        tx = Transaction.query.filter_by(razorpay_order_id=razorpay_order_id).first()
-        if not tx:
-            return jsonify({'success': False, 'message': 'Transaction not found'}), 404
-        tx.razorpay_payment_id = razorpay_payment_id
-        tx.status = 'completed'
-        current_user.credits = (current_user.credits or 0) + tx.credits_added
-        db.session.commit()
-        return jsonify({'success': True, 'message': f'Added {tx.credits_added} credits!'})
-    except Exception as e:
-        print(f"Payment error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 400
-"""
+# (keep commented as before)
 
 if __name__ == '__main__':
     app.run(debug=True)

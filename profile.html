@@ -8,6 +8,51 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        /* Toast message style (same as login.html) */
+        .message-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            max-width: 400px;
+            background: #0a0a0f;
+            border-left: 4px solid #2f9b9b;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+            font-family: 'Inter', sans-serif;
+        }
+        .message-toast.error {
+            border-left-color: #ef4444;
+        }
+        .message-toast .message-text {
+            flex: 1;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        .message-toast .close-message {
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .message-toast .close-message:hover { color: #fff; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .disabled-btn {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
     <img src="image.jpeg" alt="Background" class="bg-image">
@@ -71,21 +116,49 @@
                     {% for scan in scans %}
                         <div class="scan-card">
                             <div class="scan-header">
-                                <span class="scan-plan">{{ scan.plan_type.upper() }}</span>
-                                {% if scan.status == 'completed' and scan.report_path %}
-                                    <button class="toggle-report" data-report-id="{{ scan.id }}">View Report</button>
-                                {% else %}
-                                    <span class="status-badge">{{ scan.status }}</span>
-                                {% endif %}
+                                <div>
+                                    <span class="scan-plan">{{ scan.plan_type.upper() }}</span>
+                                    <span class="company-name">{{ scan.company_name }}</span>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    {% if scan.status == 'completed' and scan.report_path %}
+                                        <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="true">View Report</button>
+                                        <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn" data-ready="true">Download Report</a>
+                                    {% else %}
+                                        <button class="toggle-report-details disabled-btn" data-scan-id="{{ scan.id }}" data-ready="false" disabled>View Report</button>
+                                        <button class="download-report-btn-disabled disabled-btn" data-ready="false" disabled>Download Report</button>
+                                        <span class="status-badge">{{ scan.status }}</span>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="scan-url">{{ scan.target_url }}</div>
                             <div class="scan-meta">
                                 <i class="far fa-calendar-alt"></i> {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}
                                 {% if scan.credits_spent %} • <i class="fas fa-coins"></i> {{ scan.credits_spent }} credits{% endif %}
                             </div>
+
+                            <!-- Hidden details + report panel (shown when View Report is clicked) -->
                             {% if scan.status == 'completed' and scan.report_path %}
-                                <div id="report-preview-{{ scan.id }}" class="report-preview" style="display: none;">
-                                    <iframe src="{{ url_for('view_report', job_id=scan.id) }}"></iframe>
+                                <div id="scan-details-{{ scan.id }}" class="scan-details-panel" style="display: none;">
+                                    <!-- User Submitted Details -->
+                                    <div class="submitted-details">
+                                        <h4><i class="fas fa-user-edit"></i> Submission Details</h4>
+                                        <div class="details-grid">
+                                            <div><strong>Full Name:</strong> {{ scan.full_name }}</div>
+                                            <div><strong>Role:</strong> {{ scan.role }}</div>
+                                            <div><strong>Company:</strong> {{ scan.company_name }}</div>
+                                            <div><strong>Your Email:</strong> {{ scan.user_email }}</div>
+                                            <div><strong>Business Email:</strong> {{ scan.business_email }}</div>
+                                            <div><strong>Website:</strong> {{ scan.target_url }}</div>
+                                            <div><strong>Plan:</strong> {{ scan.plan_type.upper() }}</div>
+                                            <div><strong>Status:</strong> {{ scan.status }}</div>
+                                        </div>
+                                    </div>
+                                    <!-- Report Preview -->
+                                    <div class="report-preview">
+                                        <h4><i class="fas fa-file-alt"></i> Security Report</h4>
+                                        <iframe src="{{ url_for('view_report', job_id=scan.id) }}"></iframe>
+                                    </div>
                                 </div>
                             {% endif %}
                         </div>
@@ -107,5 +180,50 @@
     </footer>
 
     <script src="script.js"></script>
+    <script>
+        // Helper: show toast message
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `message-toast ${isError ? 'error' : 'success'}`;
+            toast.innerHTML = `
+                <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
+                <div class="message-text">${message}</div>
+                <button class="close-message"><i class="fas fa-times"></i></button>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+            toast.querySelector('.close-message').onclick = () => toast.remove();
+        }
+
+        // Handle disabled buttons (report not ready)
+        document.querySelectorAll('.toggle-report-details[data-ready="false"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showToast('Report is not ready yet. Please check back later.', true);
+            });
+        });
+
+        document.querySelectorAll('.download-report-btn-disabled').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showToast('Report is not ready yet. Please check back later.', true);
+            });
+        });
+
+        // Toggle details + report panel when "View Report" is clicked (only enabled buttons)
+        document.querySelectorAll('.toggle-report-details[data-ready="true"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const scanId = btn.getAttribute('data-scan-id');
+                const detailsPanel = document.getElementById(`scan-details-${scanId}`);
+                if (detailsPanel.style.display === 'none') {
+                    detailsPanel.style.display = 'block';
+                    btn.textContent = 'Hide Report';
+                } else {
+                    detailsPanel.style.display = 'none';
+                    btn.textContent = 'View Report';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

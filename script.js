@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ✅ CHANGED: Google login now redirects to Supabase OAuth endpoint
+    // Google login redirects to Supabase OAuth endpoint
     const handleGoogle = () => {
         window.location.href = '/login/google';
     };
@@ -236,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset UI elements
             const manualPanel = targetSection.querySelector('.manual-code-panel');
             if (manualPanel) manualPanel.style.display = 'none';
-            // Hide any "Verify Now" button if present
             const verifyNowBtn = targetSection.querySelector('.verify-now-btn');
             if (verifyNowBtn) verifyNowBtn.style.display = 'none';
             delete form?.dataset.verificationId;
@@ -315,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!fullName || !role || !companyName || !userEmail || !websiteUrl || !businessEmail) {
                 showMessage('Please fill all fields first.', true);
-                // Uncheck the radio so user can try again
                 const manualRadio = form.querySelector('input[name="emailOnSite"][value="no"]');
                 if (manualRadio) manualRadio.checked = false;
                 return;
@@ -327,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Disable the radio to prevent double submission
             const manualRadio = form.querySelector('input[name="emailOnSite"][value="no"]');
             if (manualRadio) manualRadio.disabled = true;
 
@@ -348,7 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
                 if (data.success) {
-                    // No popup message – just show the panel with code
                     if (codeSpan) codeSpan.textContent = data.code;
                     manualPanel.style.display = 'block';
                     form.dataset.verificationId = data.token;
