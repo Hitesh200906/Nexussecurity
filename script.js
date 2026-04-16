@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.toggle('menu-open');
         });
 
-        // Close menu when a link is clicked
         const navLinkItems = navLinks.querySelectorAll('a');
         navLinkItems.forEach(link => {
             link.addEventListener('click', () => {
@@ -25,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Also close when clicking the auth button (if it's inside navLinks)
         const authButton = navLinks.querySelector('#authButtonContainer a, #authButtonContainer button');
         if (authButton) {
             authButton.addEventListener('click', () => {
@@ -124,13 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateAuthButton();
 
-    // ---------- Login / Signup ----------
+    // ---------- Login / Signup (only login handler, signup is handled in login.html) ----------
     const loginTab = document.getElementById('loginTab');
     const signupTab = document.getElementById('signupTab');
     const loginFormDiv = document.getElementById('loginForm');
     const signupFormDiv = document.getElementById('signupForm');
     const doLogin = document.getElementById('doLogin');
-    const doSignup = document.getElementById('doSignup');
     const googleLogin = document.getElementById('googleLogin');
     const googleSignup = document.getElementById('googleSignup');
 
@@ -193,50 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (doSignup) {
-        doSignup.addEventListener('click', async () => {
-            const name = document.getElementById('signupName').value.trim();
-            const email = document.getElementById('signupEmail').value.trim();
-            const password = document.getElementById('signupPassword').value;
-            const confirm = document.getElementById('signupConfirmPassword').value;
-            if (!name || !email || !password) {
-                showMessage('Please fill in all fields.', true);
-                return;
-            }
-            if (password !== confirm) {
-                showMessage('Passwords do not match.', true);
-                return;
-            }
-            const btn = doSignup;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing up...';
-            btn.disabled = true;
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
-                });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    showMessage('✅ Account created! You are now logged in. Redirecting...');
-                    setTimeout(() => {
-                        window.location.href = '/index.html?t=' + Date.now();
-                    }, 1000);
-                } else {
-                    showMessage(data.message || 'Registration failed.', true);
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Registration error:', error);
-                showMessage('An error occurred. Please try again.', true);
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }
-        });
-    }
-
     // Google login redirects to Supabase OAuth endpoint
     const handleGoogle = () => {
         window.location.href = '/login/google';
@@ -264,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
             targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             const form = targetSection.querySelector('.scan-form');
             if (form) form.reset();
-            // Reset UI elements
             const manualPanel = targetSection.querySelector('.manual-code-panel');
             if (manualPanel) manualPanel.style.display = 'none';
             const verifyNowBtn = targetSection.querySelector('.verify-now-btn');
@@ -498,7 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========== Profile Page Enhancements ==========
-    // Helper: show toast message (used by profile page)
     function showProfileToast(message, isError = false) {
         const toast = document.createElement('div');
         toast.className = `message-toast ${isError ? 'error' : 'success'}`;
@@ -512,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.querySelector('.close-message').onclick = () => toast.remove();
     }
 
-    // Handle disabled "View Report" buttons (report not ready)
     document.querySelectorAll('.toggle-report-details[data-ready="false"]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -520,7 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Handle disabled "Download Report" buttons
     document.querySelectorAll('.download-report-btn-disabled').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -528,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Toggle details + report panel when "View Report" is clicked (only enabled buttons)
     document.querySelectorAll('.toggle-report-details[data-ready="true"]').forEach(btn => {
         btn.addEventListener('click', () => {
             const scanId = btn.getAttribute('data-scan-id');
@@ -543,7 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ========== Buy Credits with Razorpay ==========
     const buyBtn = document.getElementById('buyCreditsBtn');
     if (buyBtn) {
         buyBtn.addEventListener('click', async () => {
@@ -594,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ========== Admin Button Visibility ==========
     async function checkAdminAndShowButton() {
         const container = document.getElementById('adminButtonContainer');
         if (!container) return;
