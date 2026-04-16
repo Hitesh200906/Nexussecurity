@@ -69,6 +69,7 @@
             {% if scans %}
                 <div class="scan-list">
                     {% for scan in scans %}
+                        {% set is_ready = scan.status == 'completed' and scan.report_path %}
                         <div class="scan-card">
                             <div class="scan-header">
                                 <div>
@@ -76,13 +77,11 @@
                                     <span class="company-name">{{ scan.company_name }}</span>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    {% if scan.status == 'completed' and scan.report_path %}
-                                        <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="true">View Report</button>
-                                        <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn" data-ready="true">Download Report</a>
+                                    <!-- Status message -->
+                                    {% if is_ready %}
+                                        <span class="status-message success">✅ Your report is ready! Click 'View Report' to see it.</span>
                                     {% else %}
-                                        <button class="toggle-report-details disabled-btn" data-scan-id="{{ scan.id }}" data-ready="false" disabled>View Report</button>
-                                        <button class="download-report-btn-disabled disabled-btn" data-ready="false" disabled>Download Report</button>
-                                        <span class="status-badge">{{ scan.status }}</span>
+                                        <span class="status-message warning">⏳ Scan in progress. Report will appear here once completed.</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -92,8 +91,19 @@
                                 {% if scan.credits_spent %} • <i class="fas fa-coins"></i> {{ scan.credits_spent }} credits{% endif %}
                             </div>
 
-                            <!-- Hidden details + report panel (shown when View Report is clicked) -->
-                            {% if scan.status == 'completed' and scan.report_path %}
+                            <!-- Buttons row -->
+                            <div style="display: flex; gap: 1rem; margin-top: 0.8rem; align-items: center;">
+                                {% if is_ready %}
+                                    <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="true">View Report</button>
+                                    <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn" data-ready="true">Download Report</a>
+                                {% else %}
+                                    <button class="toggle-report-details disabled-btn" data-scan-id="{{ scan.id }}" data-ready="false" disabled>View Report</button>
+                                    <button class="download-report-btn-disabled disabled-btn" disabled>Download Report</button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Hidden details + report panel (shown only when report ready and button clicked) -->
+                            {% if is_ready %}
                                 <div id="scan-details-{{ scan.id }}" class="scan-details-panel" style="display: none;">
                                     <!-- User Submitted Details -->
                                     <div class="submitted-details">
@@ -135,5 +145,54 @@
     </footer>
 
     <script src="script.js"></script>
+    <script>
+        // Additional inline JS to handle toggle and disabled messages (if not already in script.js)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle details panel for enabled View Report buttons
+            document.querySelectorAll('.toggle-report-details[data-ready="true"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const scanId = btn.getAttribute('data-scan-id');
+                    const detailsPanel = document.getElementById(`scan-details-${scanId}`);
+                    if (detailsPanel.style.display === 'none') {
+                        detailsPanel.style.display = 'block';
+                        btn.textContent = 'Hide Report';
+                    } else {
+                        detailsPanel.style.display = 'none';
+                        btn.textContent = 'View Report';
+                    }
+                });
+            });
+
+            // Show toast for disabled buttons (if not already handled globally)
+            const disabledViewBtns = document.querySelectorAll('.toggle-report-details[data-ready="false"]');
+            const disabledDownloadBtns = document.querySelectorAll('.download-report-btn-disabled');
+            
+            function showToast(message, isError = true) {
+                const toast = document.createElement('div');
+                toast.className = `message-toast ${isError ? 'error' : 'success'}`;
+                toast.innerHTML = `
+                    <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
+                    <div class="message-text">${message}</div>
+                    <button class="close-message"><i class="fas fa-times"></i></button>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 5000);
+                toast.querySelector('.close-message').onclick = () => toast.remove();
+            }
+
+            disabledViewBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showToast('Report is not ready yet. Please check back later.', true);
+                });
+            });
+            disabledDownloadBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showToast('Report is not ready yet. Please check back later.', true);
+                });
+            });
+        });
+    </script>
 </body>
 </html>
