@@ -278,7 +278,7 @@ def send_email_via_brevo(to_email, subject, body):
         raise Exception(f"Brevo API error: {response.text}")
 
 # ---------- Friend's AI Scanner Integration ----------
-JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://monitor-oops-powerpoint-meyer.trycloudflare.com')
+JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://trails-sim-ordered-specification.trycloudflare.com')
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
