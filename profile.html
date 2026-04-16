@@ -156,37 +156,6 @@
     <script src="script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // ========== HAMBURGER MENU (if script.js didn't already handle it) ==========
-            const hamburger = document.getElementById('hamburger');
-            const navLinks = document.getElementById('navLinks');
-            if (hamburger && navLinks) {
-                hamburger.addEventListener('click', () => {
-                    navLinks.classList.toggle('active');
-                    hamburger.classList.toggle('active');
-                    document.body.classList.toggle('menu-open');
-                });
-                // Close menu when a link is clicked
-                const navLinkItems = navLinks.querySelectorAll('a');
-                navLinkItems.forEach(link => {
-                    link.addEventListener('click', () => {
-                        navLinks.classList.remove('active');
-                        hamburger.classList.remove('active');
-                        document.body.classList.remove('menu-open');
-                    });
-                });
-                // Also close when clicking the auth button container's content
-                const authContainer = navLinks.querySelector('#authButtonContainer');
-                if (authContainer) {
-                    authContainer.addEventListener('click', (e) => {
-                        if (e.target.closest('a')) {
-                            navLinks.classList.remove('active');
-                            hamburger.classList.remove('active');
-                            document.body.classList.remove('menu-open');
-                        }
-                    });
-                }
-            }
-
             // ========== Handle View Report button clicks ==========
             document.querySelectorAll('.toggle-report-details').forEach(btn => {
                 btn.addEventListener('click', () => {
