@@ -1,8 +1,39 @@
-// script.js – Nexus Security (Professional Dual Verification)
+// script.js – Nexus Security (Professional Dual Verification + Hamburger Menu)
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof fetch === 'undefined') {
         console.error('fetch() is not supported. Please update your browser.');
         return;
+    }
+
+    // ---------- HAMBURGER MENU FUNCTIONALITY ----------
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            hamburger.classList.toggle('active');
+            document.body.classList.toggle('menu-open');
+        });
+
+        // Close menu when a link is clicked
+        const navLinkItems = navLinks.querySelectorAll('a');
+        navLinkItems.forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('active');
+                document.body.classList.remove('menu-open');
+            });
+        });
+
+        // Also close when clicking the auth button (if it's inside navLinks)
+        const authButton = navLinks.querySelector('#authButtonContainer a, #authButtonContainer button');
+        if (authButton) {
+            authButton.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                hamburger.classList.remove('active');
+                document.body.classList.remove('menu-open');
+            });
+        }
     }
 
     // ---------- Modal message for selected messages ----------
