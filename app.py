@@ -132,7 +132,6 @@ class AdminSettings(db.Model):
 
 with app.app_context():
     db.create_all()
-    # Ensure admin settings exist (default passcode "nexus admin")
     admin = AdminSettings.query.get(1)
     if not admin:
         default_hash = generate_password_hash("nexus admin")
@@ -144,7 +143,7 @@ with app.app_context():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ---------- Helper: get or create user from Supabase user ----------
+# ---------- Helper functions ----------
 def get_or_create_user(supabase_user):
     email = supabase_user['email']
     name = supabase_user.get('user_metadata', {}).get('full_name', email.split('@')[0])
@@ -156,27 +155,39 @@ def get_or_create_user(supabase_user):
         db.session.commit()
     return user
 
-# ---------- Helper: generate 6-character alphanumeric code ----------
 def generate_verification_code():
     chars = [c for c in string.ascii_uppercase + string.digits if c not in 'O0I1']
     return ''.join(random.choices(chars, k=6))
 
-# ---------- Helper: get current credit costs from DB ----------
 def get_credit_costs():
     admin = AdminSettings.query.get(1)
     if admin and admin.credit_costs:
         return admin.credit_costs
     return {"basic": 0, "advanced": 10, "protection_plus": 25}
 
-# ---------- Public Credit Costs (for frontend) ----------
-@app.route('/api/credit-costs')
-def public_credit_costs():
-    """Return current credit costs for all plans (public, no auth)."""
-    return jsonify(get_credit_costs())
-
-# ---------- Helper: check if current user is admin ----------
 def is_admin():
     return current_user.is_authenticated and current_user.email == 'nexussecurity777@gmail.com'
+
+# ---------- Email sending using Brevo ----------
+def send_email_via_brevo(to_email, subject, body):
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        raise Exception("BREVO_API_KEY not set")
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    data = {
+        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": body
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo API error: {response.text}")
 
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
@@ -229,12 +240,83 @@ def api_login():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 401
 
+# ---------- Registration with email verification ----------
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.get_json()
     name = data.get('name')
     email = data.get('email')
     password = data.get('password')
+    
+    if not name or not email or not password:
+        return jsonify({'success': False, 'message': 'All fields required'}), 400
+    
+    # Check if user already exists in Supabase
+    try:
+        # Try to sign in (will fail but we check error message)
+        supabase.auth.sign_in_with_password({"email": email, "password": "dummy"})
+    except Exception as e:
+        error_str = str(e)
+        if 'Invalid login credentials' in error_str or 'User not found' in error_str:
+            # User does not exist, proceed
+            pass
+        else:
+            # Other error (e.g., network) - but assume user doesn't exist
+            pass
+    
+    # Generate a 6-digit code
+    code = ''.join(random.choices('0123456789', k=6))
+    
+    # Store pending data in session (expires in 10 minutes)
+    session['pending_signup'] = {
+        'name': name,
+        'email': email,
+        'password': password,
+        'code': code,
+        'expires': (datetime.utcnow() + timedelta(minutes=10)).timestamp()
+    }
+    
+    # Send email with code
+    subject = "Verify your email - Nexus Security"
+    body = f"""
+    <h2>Email Verification</h2>
+    <p>Hello {name},</p>
+    <p>Thank you for registering with Nexus Security.</p>
+    <p>Your verification code is: <strong style="font-size: 24px; color: #2f9b9b;">{code}</strong></p>
+    <p>This code will expire in 10 minutes.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+    <br>
+    <p>Nexus Security Team</p>
+    """
+    try:
+        send_email_via_brevo(email, subject, body)
+        return jsonify({'success': True, 'message': 'Verification code sent to your email', 'requires_verification': True})
+    except Exception as e:
+        session.pop('pending_signup', None)
+        return jsonify({'success': False, 'message': f'Failed to send email: {str(e)}'}), 500
+
+@app.route('/api/verify-email-code', methods=['POST'])
+def verify_email_code():
+    data = request.get_json()
+    code = data.get('code')
+    
+    pending = session.get('pending_signup')
+    if not pending:
+        return jsonify({'success': False, 'message': 'No pending registration. Please start over.'}), 400
+    
+    # Check expiry
+    if datetime.utcnow().timestamp() > pending['expires']:
+        session.pop('pending_signup', None)
+        return jsonify({'success': False, 'message': 'Verification code expired. Please register again.'}), 400
+    
+    if code != pending['code']:
+        return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
+    
+    # Code correct – create user in Supabase
+    name = pending['name']
+    email = pending['email']
+    password = pending['password']
+    
     try:
         res = supabase.auth.sign_up({
             "email": email,
@@ -247,6 +329,7 @@ def api_register():
         session['supabase_access_token'] = res.session.access_token if res.session else None
         db_user = get_or_create_user(user.dict())
         login_user(db_user)
+        session.pop('pending_signup', None)
         return jsonify({'success': True, 'message': 'Registration successful'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400
@@ -262,26 +345,10 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ---------- Email sending using Brevo HTTP API ----------
-def send_email_via_brevo(to_email, subject, body):
-    api_key = os.getenv('BREVO_API_KEY')
-    if not api_key:
-        raise Exception("BREVO_API_KEY not set")
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "accept": "application/json",
-        "api-key": api_key,
-        "content-type": "application/json"
-    }
-    data = {
-        "sender": {"name": "Nexus Security", "email": os.getenv('MAIL_DEFAULT_SENDER')},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": body
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code not in (200, 201):
-        raise Exception(f"Brevo API error: {response.text}")
+# ---------- Public credit costs ----------
+@app.route('/api/credit-costs')
+def public_credit_costs():
+    return jsonify(get_credit_costs())
 
 # ---------- Friend's AI Scanner Integration ----------
 JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://monitor-oops-powerpoint-meyer.trycloudflare.com')
@@ -289,15 +356,10 @@ CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
     if not JATIN_API_URL:
-        print("❌ JATIN_API_URL is not configured.")
+        print("❌ JATIN_API_URL not configured.")
         return False
 
-    # Map internal plan names to external API expected values
-    plan_mapping = {
-        'basic': 'basic',
-        'advanced': 'advanced',
-        'protection_plus': 'ultimate'
-    }
+    plan_mapping = {'basic': 'basic', 'advanced': 'advanced', 'protection_plus': 'ultimate'}
     external_plan = plan_mapping.get(plan, 'basic')
 
     full_url = f"{JATIN_API_URL}/api/scan/submit"
@@ -325,7 +387,6 @@ def send_to_friend_scanner(scan_id, url, plan, user_email):
         print(f"❌ Unexpected error calling scanner: {e}")
         return False
 
-# ---------- Credit Deduction Helper (uses dynamic costs) ----------
 def deduct_credits(user, plan_type):
     costs = get_credit_costs()
     cost = costs.get(plan_type, 0)
@@ -666,7 +727,6 @@ def request_scan():
         db.session.commit()
         return jsonify({'success': True, 'code': code, 'token': verification_entry.id, 'message': 'Verification code generated'})
 
-# ---------- FIXED: verify_scan works without login ----------
 @app.route('/verify_scan/<token>')
 def verify_scan(token):
     pending = PendingScan.query.filter_by(token=token, used=False).first()
@@ -807,7 +867,6 @@ def verify_code():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error checking website: {str(e)}'}), 500
 
-# ---------- Callback from Friend's Scanner (UPDATED: accepts direct HTML) ----------
 @app.route('/api/scan-callback', methods=['POST'])
 def scan_callback():
     data = request.json
@@ -825,7 +884,6 @@ def scan_callback():
 
     if status == 'completed':
         html_content = None
-
         if report_html:
             html_content = report_html
             print(f"✅ Received direct HTML for scan {scan_id}")
@@ -861,7 +919,6 @@ def scan_callback():
         print(f"⚠️ Scan {scan_id} reported status: {status}")
         return jsonify({'status': 'updated'})
 
-# ---------- View Report ----------
 @app.route('/view_report/<int:job_id>')
 @login_required
 def view_report(job_id):
@@ -874,7 +931,6 @@ def view_report(job_id):
         return redirect(url_for('profile'))
     return send_file(os.path.join(app.config['UPLOAD_FOLDER'], job.report_path))
 
-# ---------- Download Report ----------
 @app.route('/download_report/<int:job_id>')
 @login_required
 def download_report(job_id):
@@ -891,7 +947,6 @@ def download_report(job_id):
         download_name=f"security_report_{job.id}.html"
     )
 
-# ---------- Test Email Endpoint (optional) ----------
 @app.route('/test-email')
 def test_email():
     try:
