@@ -608,7 +608,16 @@ def request_scan():
                 db.session.commit()
                 try:
                     verify_url = url_for('verify_scan', token=token, _external=True)
-                    email_body = f"Hello,<br><br>You requested a security scan for {website_url} ({plan} plan).<br>Please click the link below to confirm your email and start the scan:<br><br><a href='{verify_url}'>Confirm Scan</a><br><br>If you did not request this, please ignore this email.<br><br>Nexus Security Team"
+                    # Updated email body: no need to be logged in
+                    email_body = f"""
+                    Hello,<br><br>
+                    You requested a security scan for {website_url} ({plan} plan).<br><br>
+                    Click the link below to confirm and start the scan:<br><br>
+                    <a href='{verify_url}'>Confirm Scan</a><br><br>
+                    You do not need to be logged in – the scan will be associated with your account automatically.<br><br>
+                    If you did not request this, please ignore this email.<br><br>
+                    Nexus Security Team
+                    """
                     send_email_via_brevo(business_email, 'Verify your scan request for Nexus Security', email_body)
                     return jsonify({'success': True, 'message': f'Verification email sent to {business_email}'})
                 except Exception as mail_err:
@@ -644,21 +653,32 @@ def request_scan():
         db.session.commit()
         return jsonify({'success': True, 'code': code, 'token': verification_entry.id, 'message': 'Verification code generated'})
 
+# ---------- FIXED: verify_scan works without login ----------
 @app.route('/verify_scan/<token>')
 def verify_scan(token):
     pending = PendingScan.query.filter_by(token=token, used=False).first()
     if not pending:
-        return "Invalid or expired verification link.", 400
+        return "<h2>Invalid or expired verification link.</h2><p>Please request a new scan.</p>", 400
+
+    # Get the user who originally requested the scan
+    user = User.query.get(pending.user_id)
+    if not user:
+        return "<h2>User not found.</h2><p>Please contact support.</p>", 400
 
     prices = {'basic': 0, 'advanced': 99, 'protection_plus': 999}
     scan_id = hashlib.md5(f"{pending.website_url}{pending.user_email}{datetime.utcnow()}".encode()).hexdigest()[:16]
 
-    # Deduct credits using dynamic costs
-    if not deduct_credits(current_user, pending.plan_type):
-        flash('Insufficient credits. Please buy credits to start a scan.', 'danger')
-        return redirect(url_for('profile'))
-
+    # Deduct credits from the original user (not current_user)
     costs = get_credit_costs()
+    cost = costs.get(pending.plan_type, 0)
+    if cost > 0 and (user.credits or 0) < cost:
+        return f"<h2>Insufficient credits</h2><p>You need {cost} credits for this scan. Please buy credits and request again.</p>", 400
+
+    if cost > 0:
+        user.credits -= cost
+        db.session.commit()
+
+    # Create the scan job
     job = ScanJob(
         user_id=pending.user_id,
         target_url=pending.website_url,
@@ -672,23 +692,57 @@ def verify_scan(token):
         business_email=pending.business_email,
         scan_id=scan_id,
         status='queued',
-        credits_spent=costs.get(pending.plan_type, 0)
+        credits_spent=cost
     )
     db.session.add(job)
     db.session.commit()
+
+    # Mark pending scan as used
     pending.used = True
     db.session.commit()
 
+    # Send to friend's scanner
     remote_success = send_to_friend_scanner(scan_id, pending.website_url, pending.plan_type, pending.user_email)
-    if remote_success:
-        print(f"Scan {scan_id} queued with friend's scanner")
-        flash('Scan confirmed! The AI scanner will process your request.', 'success')
-    else:
+    if not remote_success:
         job.status = 'failed'
         db.session.commit()
-        flash('Scan request could not be sent. Please try again later.', 'danger')
+        failure_msg = "Scan request could not be sent to the scanner. Please try again later."
+    else:
+        failure_msg = ""
 
-    return redirect(url_for('profile'))
+    # Determine response based on login status
+    if current_user.is_authenticated and current_user.id == pending.user_id:
+        # User is logged in and owns the scan – redirect to profile
+        flash('Scan confirmed! The AI scanner will process your request.' + (' ' + failure_msg if failure_msg else ''), 'success' if remote_success else 'danger')
+        return redirect(url_for('profile'))
+    else:
+        # User not logged in (or different user) – show confirmation page
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Scan Started – Nexus Security</title>
+            <style>
+                body {{ background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 2rem; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: #0a0a0f; padding: 2rem; border-radius: 1rem; border: 1px solid #2f9b9b; }}
+                h1 {{ color: #2f9b9b; }}
+                a {{ color: #2f9b9b; text-decoration: none; }}
+                .btn {{ display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #2f9b9b; border-radius: 2rem; color: #fff; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>✅ Scan Started!</h1>
+                <p>Your security scan for <strong>{pending.website_url}</strong> ({pending.plan_type} plan) has been queued.</p>
+                <p>You will receive the report in your <strong>Profile</strong> once it's ready.</p>
+                <p>Please <a href="/login.html" class="btn">Log in</a> to view your scan history and download the report later.</p>
+                <p><small>If you are already logged in, <a href="/profile">go to your profile</a>.</small></p>
+                {f"<p style='color:#ef4444;'>{failure_msg}</p>" if failure_msg else ""}
+            </div>
+        </body>
+        </html>
+        """
+        return html
 
 @app.route('/api/verify_code', methods=['POST'])
 @login_required

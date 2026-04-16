@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateAuthButton();
 
-    // ---------- Login / Signup (unchanged) ----------
+    // ---------- Login / Signup ----------
     const loginTab = document.getElementById('loginTab');
     const signupTab = document.getElementById('signupTab');
     const loginFormDiv = document.getElementById('loginForm');
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ---------- SCAN FORM HANDLER (Redesigned – no "Start Scan" button) ----------
+    // ---------- SCAN FORM HANDLER ----------
     const forms = document.querySelectorAll('.scan-form');
     forms.forEach(form => {
         const methodRadios = form.querySelectorAll('input[name="emailOnSite"]');
@@ -284,16 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const codeSpan = form.querySelector('.verification-code');
         const verifyStatusDiv = form.querySelector('.verify-status');
 
-        // When a verification method is selected
         methodRadios.forEach(radio => {
             radio.addEventListener('change', () => {
                 if (radio.checked) {
                     if (radio.value === 'yes') {
-                        // Email method: show "Verify Now" button, hide manual panel
                         verifyNowBtn.style.display = 'block';
                         manualPanel.style.display = 'none';
                     } else {
-                        // Manual method: hide "Verify Now" button and immediately generate code
                         verifyNowBtn.style.display = 'none';
                         generateCodeForManual(form, manualPanel, codeSpan, verifyStatusDiv);
                     }
@@ -301,9 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Function to generate code for manual method (called immediately when selected)
         async function generateCodeForManual(form, manualPanel, codeSpan, verifyStatusDiv) {
-            // Gather form data
             const fullName = form.querySelector('[name="fullName"]').value.trim();
             const role = form.querySelector('[name="role"]').value.trim();
             const companyName = form.querySelector('[name="companyName"]').value.trim();
@@ -366,7 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Verify Now button (email method)
         if (verifyNowBtn) {
             verifyNowBtn.addEventListener('click', async () => {
                 const selectedRadio = form.querySelector('input[name="emailOnSite"]:checked');
@@ -425,7 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Verify Code button (manual path)
         if (verifyBtn) {
             verifyBtn.addEventListener('click', async () => {
                 const verificationId = form.dataset.verificationId;
@@ -465,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Copy code button
         if (copyBtn && codeSpan) {
             copyBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText(codeSpan.textContent);
@@ -475,22 +467,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========== Profile Page Enhancements ==========
-    // Toggle report preview (only if elements exist)
-    document.querySelectorAll('.toggle-report').forEach(btn => {
+    // Helper: show toast message (used by profile page)
+    function showProfileToast(message, isError = false) {
+        const toast = document.createElement('div');
+        toast.className = `message-toast ${isError ? 'error' : 'success'}`;
+        toast.innerHTML = `
+            <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
+            <div class="message-text">${message}</div>
+            <button class="close-message"><i class="fas fa-times"></i></button>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+        toast.querySelector('.close-message').onclick = () => toast.remove();
+    }
+
+    // Handle disabled "View Report" buttons (report not ready)
+    document.querySelectorAll('.toggle-report-details[data-ready="false"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showProfileToast('Report is not ready yet. Please check back later.', true);
+        });
+    });
+
+    // Handle disabled "Download Report" buttons
+    document.querySelectorAll('.download-report-btn-disabled').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showProfileToast('Report is not ready yet. Please check back later.', true);
+        });
+    });
+
+    // Toggle details + report panel when "View Report" is clicked (only enabled buttons)
+    document.querySelectorAll('.toggle-report-details[data-ready="true"]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const reportId = btn.getAttribute('data-report-id');
-            const previewDiv = document.getElementById(`report-preview-${reportId}`);
-            if (previewDiv.style.display === 'none') {
-                previewDiv.style.display = 'block';
+            const scanId = btn.getAttribute('data-scan-id');
+            const detailsPanel = document.getElementById(`scan-details-${scanId}`);
+            if (detailsPanel.style.display === 'none') {
+                detailsPanel.style.display = 'block';
                 btn.textContent = 'Hide Report';
             } else {
-                previewDiv.style.display = 'none';
+                detailsPanel.style.display = 'none';
                 btn.textContent = 'View Report';
             }
         });
     });
 
-    // Buy credits with Razorpay (only if button exists)
+    // ========== Buy Credits with Razorpay ==========
     const buyBtn = document.getElementById('buyCreditsBtn');
     if (buyBtn) {
         buyBtn.addEventListener('click', async () => {
