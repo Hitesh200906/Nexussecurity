@@ -2997,7 +2997,7 @@ a.disabled {
 
 /* ============================================
    FULL MOBILE RESPONSIVE CSS
-   Hamburger Menu | Animated Profile/Admin Buttons | Scan Card Buttons at Bottom
+   Hamburger Menu | Standard Profile/Admin Buttons | Scan Card Buttons at Bottom
    =========================================== */
 
 /* ---------- Base Hamburger Styles (hidden on desktop) ---------- */
@@ -3088,32 +3088,10 @@ a.disabled {
     right: 0;
   }
 
-  /* ----- Animated menu items (staggered fade-in) ----- */
+  /* ----- All menu links (including Profile & Admin) – uniform styling ----- */
   .nav-links a,
   .nav-links #authButton,
   .nav-links #adminButton {
-    opacity: 0;
-    transform: translateX(30px);
-    animation: slideInMenu 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
-  }
-  .nav-links a:nth-child(1) { animation-delay: 0.05s; }
-  .nav-links a:nth-child(2) { animation-delay: 0.1s; }
-  .nav-links #authButton { animation-delay: 0.15s; }
-  .nav-links #adminButton { animation-delay: 0.2s; }
-
-  @keyframes slideInMenu {
-    0% {
-      opacity: 0;
-      transform: translateX(30px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  /* ----- Regular menu links ----- */
-  .nav-links a {
     font-size: 1.2rem;
     padding: 12px 0;
     width: 100%;
@@ -3122,95 +3100,49 @@ a.disabled {
     border-bottom: 1px solid rgba(47, 155, 155, 0.15);
     transition: all 0.25s;
     font-weight: 500;
+    background: transparent;
+    transform: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+    letter-spacing: normal;
   }
-  .nav-links a:hover {
+
+  /* Remove any pseudo-elements or icons */
+  .nav-links #authButton::before,
+  .nav-links #adminButton::before {
+    display: none;
+  }
+
+  .nav-links #authButton span,
+  .nav-links #adminButton span {
+    transform: none;
+    display: inline;
+    gap: 0;
+  }
+
+  .nav-links #authButton span::before,
+  .nav-links #adminButton span::before {
+    content: none;
+  }
+
+  /* Hover effect for all links (same) */
+  .nav-links a:hover,
+  .nav-links #authButton:hover,
+  .nav-links #adminButton:hover {
     color: var(--accent);
     transform: translateX(8px);
     border-bottom-color: var(--accent);
+    background: transparent;
   }
 
-  /* ----- Professional Profile Button (inside hamburger) ----- */
-  .nav-links #authButton {
-    margin-top: 1.5rem;
-    width: 85%;
-    text-align: center;
-    transform: skew(0deg) !important;
-    background: linear-gradient(135deg, var(--accent), var(--accent-light));
-    color: #fff;
-    border: none;
-    border-radius: 50px !important;
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(47, 155, 155, 0.3);
-  }
-  .nav-links #authButton span {
-    transform: skew(0deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .nav-links #authButton span::before {
-    content: "👤";
-    font-size: 1.1rem;
-    transition: transform 0.2s;
-  }
-  .nav-links #authButton:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 20px rgba(47, 155, 155, 0.5);
-    background: linear-gradient(135deg, var(--accent-light), var(--accent));
-  }
-  .nav-links #authButton:hover span::before {
-    transform: scale(1.1);
-  }
-  .nav-links #authButton:active {
-    transform: translateY(0) scale(0.98);
-  }
-
-  /* ----- Professional Admin Button (inside hamburger) ----- */
+  /* No animation on appearance */
+  .nav-links a,
+  .nav-links #authButton,
   .nav-links #adminButton {
-    margin-top: 1rem;
-    width: 85%;
-    text-align: center;
-    transform: skew(0deg) !important;
-    background: linear-gradient(135deg, #1e2a2a, #0f1a1a);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 50px !important;
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(4px);
-  }
-  .nav-links #adminButton span {
-    transform: skew(0deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .nav-links #adminButton span::before {
-    content: "⚙️";
-    font-size: 1.1rem;
-    transition: transform 0.2s;
-  }
-  .nav-links #adminButton:hover {
-    transform: translateY(-3px) scale(1.02);
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent-light);
-    box-shadow: 0 8px 20px rgba(47, 155, 155, 0.4);
-  }
-  .nav-links #adminButton:hover span::before {
-    transform: rotate(30deg);
-  }
-  .nav-links #adminButton:active {
-    transform: translateY(0) scale(0.98);
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 
   /* ----- Hamburger animation (open state) ----- */
@@ -3241,7 +3173,7 @@ a.disabled {
     font-size: 0.85rem;
   }
 
-  /* ----- General mobile adjustments ----- */
+  /* ----- General mobile adjustments (keep existing) ----- */
   .scan-types {
     gap: 1rem;
     padding: 0 1rem;
@@ -3336,10 +3268,6 @@ a.disabled {
   .pay-btn {
     width: 100%;
     justify-content: center;
-  }
-  .toggle-report-details,
-  .download-report-btn {
-    /* already handled above */
   }
 
   /* ----- Admin panel responsive ----- */
@@ -3447,7 +3375,9 @@ a.disabled {
     gap: 1.5rem !important;
     padding: 4rem 1rem;
   }
-  .nav-links a {
+  .nav-links a,
+  .nav-links #authButton,
+  .nav-links #adminButton {
     font-size: 1.1rem;
   }
   .hero {
