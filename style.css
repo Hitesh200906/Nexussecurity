@@ -3126,6 +3126,67 @@ body:has(#passcodeForm)::after {
     }
 }
 
+/* ============================================
+   FOOTER LEGAL LINKS STYLES
+   ============================================ */
+
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+footer p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease, text-decoration 0.2s;
+    margin: 0 0.25rem;
+}
+
+footer a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    footer {
+        padding: 1.5rem 1rem;
+        font-size: 0.8rem;
+    }
+    
+    footer p {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem 1rem;
+    }
+    
+    footer a {
+        margin: 0;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    footer {
+        padding: 1rem;
+        font-size: 0.7rem;
+    }
+}
+
+
+
+
 
 
 
@@ -3669,4 +3730,5 @@ body:has(#passcodeForm)::after {
   border-radius: 0.5rem;
   padding: 1rem;
 }
+
 
