@@ -501,6 +501,10 @@ def index_html():
 def login_html():
     return render_template('login.html')
 
+@app.route('/legal.html')
+def legal():
+    return render_template('legal.html')
+
 @app.route('/profile')
 @login_required
 def profile():
