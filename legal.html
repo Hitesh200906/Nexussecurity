@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Legal & Information – Nexus Security</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .legal-nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(47, 155, 155, 0.3);
+        }
+        .legal-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .legal-nav a:hover, .legal-nav a.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .legal-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .legal-section.active {
+            display: block;
+        }
+        .legal-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(10, 10, 15, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(47, 155, 155, 0.3);
+        }
+        .legal-container h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+        .legal-container h2 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.5rem;
+            color: #fff;
+        }
+        .legal-container p, .legal-container li {
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 0.8rem;
+        }
+        .legal-container ul {
+            margin-left: 1.5rem;
+        }
+        .legal-container a {
+            color: var(--accent);
+        }
+        .contact-info {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 1rem;
+            margin: 1rem 0;
+        }
+        .contact-form input, .contact-form textarea {
+            width: 100%;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            background: rgba(15,15,23,0.8);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: white;
+        }
+        .contact-form button {
+            background: var(--accent);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 2rem;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .back-home {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.5rem 1.5rem;
+            background: var(--accent);
+            border-radius: 2rem;
+            color: #000;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .back-home:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) {
+            .legal-container { padding: 1.5rem; margin: 1rem; }
+            .legal-container h1 { font-size: 1.5rem; }
+            .legal-nav a { font-size: 0.8rem; padding: 0.3rem 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <img src="image.jpeg" alt="Background" class="bg-image">
+
+    <nav class="navbar">
+        <div class="logo"><h1>NEXUS SECURITY</h1></div>
+        <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        <div class="nav-links" id="navLinks">
+            <a href="index.html">Home</a>
+            <a href="index.html#plans">Plans</a>
+            <div id="authButtonContainer"></div>
+        </div>
+    </nav>
+
+    <div class="legal-container">
+        <div class="legal-nav">
+            <a href="#" data-section="terms" class="active">Terms & Conditions</a>
+            <a href="#" data-section="privacy">Privacy Policy</a>
+            <a href="#" data-section="refund">Refund & Cancellation</a>
+            <a href="#" data-section="about">About Us</a>
+            <a href="#" data-section="contact">Contact Us</a>
+            <a href="#" data-section="pricing">Pricing Details</a>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div id="terms" class="legal-section active">
+            <h1>Terms & Conditions</h1>
+            <p><strong>Last Updated:</strong> April 17, 2026</p>
+            
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing or using the Nexus Security website and services, you agree to be bound by these Terms & Conditions. If you disagree with any part, you may not access our services.</p>
+            
+            <h2>2. Description of Service</h2>
+            <p>Nexus Security provides AI-powered vulnerability scanning for websites. We offer three plans: Basic (free), Advanced (credit-based), and Protection+ (credit-based). Detailed reports are delivered via your profile page.</p>
+            
+            <h2>3. User Accounts</h2>
+            <p>You must create an account to use our paid services. You are responsible for maintaining the confidentiality of your login credentials. You agree to provide accurate and complete information during registration.</p>
+            
+            <h2>4. Credits and Payments</h2>
+            <p>Credits can be purchased on our platform. 1 credit = 1 scan (Advanced plan). Credits are non-refundable and expire 12 months after purchase. Prices are subject to change with notice.</p>
+            
+            <h2>5. Acceptable Use</h2>
+            <p>You agree not to use our services for illegal activities, to scan websites you do not own or have permission to test, or to circumvent any security measures.</p>
+            
+            <h2>6. Intellectual Property</h2>
+            <p>All content, trademarks, and technology on this site are owned by Nexus Security. You may not copy, modify, or distribute our reports without permission.</p>
+            
+            <h2>7. Limitation of Liability</h2>
+            <p>Nexus Security is not liable for any damages arising from the use or inability to use our services, including but not limited to data loss or business interruption.</p>
+            
+            <h2>8. Termination</h2>
+            <p>We reserve the right to suspend or terminate accounts that violate these terms.</p>
+            
+            <h2>9. Governing Law</h2>
+            <p>These terms shall be governed by the laws of India.</p>
+            
+            <h2>10. Contact</h2>
+            <p>For questions about these Terms, contact us at <a href="mailto:support@nexussecurity.com">support@nexussecurity.com</a>.</p>
+        </div>
+
+        <!-- Privacy Policy -->
+        <div id="privacy" class="legal-section">
+            <h1>Privacy Policy</h1>
+            <p><strong>Last Updated:</strong> April 17, 2026</p>
+            
+            <h2>1. Information We Collect</h2>
+            <p>We collect personal information you provide: name, email address, company name, role, and website URLs. We also collect payment information (processed securely by Razorpay). Automatically collected data includes IP address and browser type.</p>
+            
+            <h2>2. How We Use Your Information</h2>
+            <p>We use your information to: provide scanning services, deliver reports, communicate with you about your scans, process payments, improve our services, and comply with legal obligations.</p>
+            
+            <h2>3. Data Sharing</h2>
+            <p>We do not sell your personal data. We share data with: third-party AI scanner API (for scan processing), email service provider (Brevo), and payment processor (Razorpay). All third parties are contractually obligated to protect your data.</p>
+            
+            <h2>4. Data Security</h2>
+            <p>We implement industry-standard security measures including encryption, secure servers, and regular backups. However, no method of transmission over the Internet is 100% secure.</p>
+            
+            <h2>5. Your Rights</h2>
+            <p>You may request access, correction, or deletion of your personal data by contacting us. You may also request a copy of your scan reports.</p>
+            
+            <h2>6. Cookies</h2>
+            <p>We use essential cookies for authentication and session management. You may disable cookies in your browser, but some features may not function properly.</p>
+            
+            <h2>7. Children's Privacy</h2>
+            <p>Our services are not intended for children under 13. We do not knowingly collect data from children.</p>
+            
+            <h2>8. Changes to This Policy</h2>
+            <p>We may update this policy. Changes will be posted on this page with an updated revision date.</p>
+            
+            <h2>9. Contact Us</h2>
+            <p>For privacy concerns, email <a href="mailto:privacy@nexussecurity.com">privacy@nexussecurity.com</a>.</p>
+        </div>
+
+        <!-- Refund & Cancellation Policy -->
+        <div id="refund" class="legal-section">
+            <h1>Refund & Cancellation Policy</h1>
+            <p><strong>Last Updated:</strong> April 17, 2026</p>
+            
+            <h2>1. Credit Purchases</h2>
+            <p>Credits are non-refundable once purchased. Unused credits expire 12 months from the date of purchase. You may request a refund only if you have not used any credits and the request is made within 7 days of purchase.</p>
+            
+            <h2>2. Scan Services</h2>
+            <p>Once a scan is initiated, credits are deducted and cannot be refunded. If a scan fails due to technical issues on our end, we will re-credit your account with the same number of credits.</p>
+            
+            <h2>3. Cancellation</h2>
+            <p>You may cancel your account at any time by contacting support. No refunds will be provided for unused credits upon cancellation.</p>
+            
+            <h2>4. Processing Time</h2>
+            <p>Refund requests are processed within 7-10 business days. Approved refunds will be credited to the original payment method.</p>
+            
+            <h2>5. How to Request a Refund</h2>
+            <p>To request a refund, email <a href="mailto:billing@nexussecurity.com">billing@nexussecurity.com</a> with your account email, transaction ID, and reason for refund.</p>
+        </div>
+
+        <!-- About Us -->
+        <div id="about" class="legal-section">
+            <h1>About Nexus Security</h1>
+            
+            <h2>Who We Are</h2>
+            <p>Nexus Security is a leading provider of AI-powered vulnerability scanning solutions. We help businesses protect their digital assets by identifying security flaws before attackers can exploit them.</p>
+            
+            <h2>Our Mission</h2>
+            <p>To make website security accessible, affordable, and actionable for businesses of all sizes. We believe every website deserves protection against cyber threats.</p>
+            
+            <h2>Our Technology</h2>
+            <p>Our AI engine performs deep automated security audits, simulating real-world attacks to uncover SQL injection, XSS, misconfigurations, and other vulnerabilities. We deliver detailed reports with step-by-step remediation guides.</p>
+            
+            <h2>Why Choose Us</h2>
+            <ul>
+                <li>99% accuracy in vulnerability detection</li>
+                <li>24-hour report delivery</li>
+                <li>Compliance mapping (OWASP, CWE)</li>
+                <li>Affordable credit-based pricing</li>
+                <li>Dedicated support team</li>
+            </ul>
+            
+            <h2>Our Team</h2>
+            <p>Nexus Security was founded by cybersecurity experts with years of experience in ethical hacking and security research. We are committed to continuous innovation and customer success.</p>
+        </div>
+
+        <!-- Contact Us -->
+        <div id="contact" class="legal-section">
+            <h1>Contact Us</h1>
+            
+            <div class="contact-info">
+                <p><i class="fas fa-map-marker-alt"></i> <strong>Address:</strong><br>
+                123, Cyber Heights, Andheri East,<br>
+                Mumbai – 400093, Maharashtra, India</p>
+                
+                <p><i class="fas fa-phone"></i> <strong>Phone:</strong><br>
+                +91 22 1234 5678 (Mon-Fri, 10 AM – 6 PM IST)</p>
+                
+                <p><i class="fas fa-envelope"></i> <strong>Email:</strong><br>
+                <a href="mailto:support@nexussecurity.com">support@nexussecurity.com</a> (General Support)<br>
+                <a href="mailto:billing@nexussecurity.com">billing@nexussecurity.com</a> (Billing & Refunds)<br>
+                <a href="mailto:privacy@nexussecurity.com">privacy@nexussecurity.com</a> (Privacy Concerns)</p>
+            </div>
+            
+            <h2>Send Us a Message</h2>
+            <form class="contact-form" id="contactForm">
+                <input type="text" placeholder="Your Name" required>
+                <input type="email" placeholder="Your Email" required>
+                <input type="text" placeholder="Subject" required>
+                <textarea rows="5" placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+            </form>
+            <p style="font-size:0.8rem; margin-top:0.5rem;">We typically respond within 24-48 hours.</p>
+        </div>
+
+        <!-- Pricing Details -->
+        <div id="pricing" class="legal-section">
+            <h1>Pricing Details</h1>
+            
+            <h2>Credit System</h2>
+            <p>Nexus Security uses a credit-based payment model. 1 credit = 1 scan (Advanced plan). Credits never expire for 12 months and can be purchased in any quantity.</p>
+            
+            <h2>Plan Costs (in Credits)</h2>
+            <ul>
+                <li><strong>Basic Scan:</strong> 0 credits (free)</li>
+                <li><strong>Advanced Scan:</strong> 10 credits</li>
+                <li><strong>Protection+ Scan:</strong> 25 credits</li>
+            </ul>
+            
+            <h2>Credit Purchase Rates</h2>
+            <ul>
+                <li>1 credit = ₹10 (Indian Rupees)</li>
+                <li>Minimum purchase: 10 credits (₹100)</li>
+                <li>Bulk discounts available for 100+ credits (contact sales)</li>
+            </ul>
+            
+            <h2>Payment Methods</h2>
+            <p>We accept payments via Razorpay: Credit/Debit Cards, Net Banking, UPI, and Wallets.</p>
+            
+            <h2>Taxes</h2>
+            <p>All prices are inclusive of applicable GST (18%) as per Indian tax laws. Invoices are provided for every purchase.</p>
+            
+            <h2>Enterprise Plans</h2>
+            <p>For high-volume scanning or custom requirements, contact us for a tailored enterprise plan with dedicated support and SLA.</p>
+            
+            <h2>Changes to Pricing</h2>
+            <p>We reserve the right to modify pricing with 30 days' notice. Existing credits remain valid at the rate they were purchased.</p>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="index.html" class="back-home"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 Nexus Security. All rights reserved. | <a href="legal.html#terms">Terms</a> | <a href="legal.html#privacy">Privacy</a> | <a href="legal.html#refund">Refund</a> | <a href="legal.html#about">About</a> | <a href="legal.html#contact">Contact</a> | <a href="legal.html#pricing">Pricing</a></p>
+    </footer>
+
+    <script>
+        // Tab switching
+        const sections = ['terms', 'privacy', 'refund', 'about', 'contact', 'pricing'];
+        const navLinks = document.querySelectorAll('.legal-nav a');
+        
+        function showSection(sectionId) {
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-section') === sectionId) {
+                    link.classList.add('active');
+                }
+            });
+            // Update URL hash without scrolling
+            history.pushState(null, null, `#${sectionId}`);
+        }
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.getAttribute('data-section');
+                showSection(section);
+            });
+        });
+        
+        // Check URL hash on load
+        const hash = window.location.hash.substring(1);
+        if (hash && sections.includes(hash)) {
+            showSection(hash);
+        } else {
+            showSection('terms');
+        }
+        
+        // Handle contact form submission (optional – you can add backend later)
+        const contactForm = document.getElementById('contactForm');
+        if (contactForm) {
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('Message sent! We will get back to you soon.');
+                contactForm.reset();
+            });
+        }
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
