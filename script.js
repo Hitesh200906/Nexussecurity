@@ -491,56 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const buyBtn = document.getElementById('buyCreditsBtn');
-    if (buyBtn) {
-        buyBtn.addEventListener('click', async () => {
-            const credits = prompt('Enter number of credits to buy (1 credit = ₹10):', '10');
-            if (!credits) return;
-            const amount = credits * 10;
-            try {
-                const response = await fetch('/api/create-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount: amount, credits: parseInt(credits) })
-                });
-                const order = await response.json();
-                if (!order.order_id) throw new Error('Failed to create order');
-
-                const options = {
-                    key: order.key,
-                    amount: order.amount,
-                    currency: order.currency,
-                    name: 'Nexus Security',
-                    description: `Buy ${credits} credits`,
-                    order_id: order.order_id,
-                    handler: async function(response) {
-                        const verifyRes = await fetch('/api/verify-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                order_id: response.razorpay_order_id,
-                                payment_id: response.razorpay_payment_id,
-                                signature: response.razorpay_signature
-                            })
-                        });
-                        const verifyData = await verifyRes.json();
-                        if (verifyData.success) {
-                            alert(verifyData.message);
-                            window.location.reload();
-                        } else {
-                            alert('Payment verification failed: ' + verifyData.message);
-                        }
-                    },
-                    theme: { color: '#2f9b9b' }
-                };
-                const rzp = new Razorpay(options);
-                rzp.open();
-            } catch (err) {
-                alert('Error: ' + err.message);
-            }
-        });
-    }
-
+    // ========== Admin Button Visibility ==========
     async function checkAdminAndShowButton() {
         const container = document.getElementById('adminButtonContainer');
         if (!container) return;

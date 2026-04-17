@@ -15,7 +15,6 @@
         <div class="logo">
             <h1>NEXUS SECURITY</h1>
         </div>
-        <!-- Hamburger button for mobile -->
         <div class="hamburger" id="hamburger">
             <span></span>
             <span></span>
@@ -29,22 +28,56 @@
     </nav>
 
     <div class="profile-dashboard">
-        <!-- Welcome & Account Info -->
         <div class="welcome-section">
             <h1>Welcome, {{ user.name }} 👋</h1>
             <p>{{ user.email }}</p>
         </div>
 
-        <!-- Stats Grid -->
         <div class="dashboard-grid">
-            <!-- Credits Card -->
+            <!-- Credits Card with Purchase Box -->
             <div class="dashboard-card">
                 <div class="card-title"><i class="fas fa-coins"></i> Credits Balance</div>
                 <div class="stat-number">{{ user.credits or 0 }} credits</div>
                 <div class="stat-label">1 credit = 1 scan (Advanced plan)</div>
-                <div class="credits-action">
-                    <button id="buyCreditsBtn" class="pay-btn">
-                        <span class="btn-text">Buy Credits</span>
+                
+                <div class="credit-purchase-box">
+                    <h4><i class="fas fa-shopping-cart"></i> Buy Credits</h4>
+                    
+                    <div class="purchase-row">
+                        <label>Credits:</label>
+                        <div class="credit-selector">
+                            <input type="number" id="creditAmount" min="10" value="10" step="10">
+                            <span class="credit-unit">credits</span>
+                        </div>
+                    </div>
+                    
+                    <div class="purchase-row">
+                        <label>Currency:</label>
+                        <select id="currencySelect">
+                            <option value="INR">Indian Rupee (₹)</option>
+                            <option value="USD" selected>US Dollar ($)</option>
+                            <option value="EUR">Euro (€)</option>
+                            <option value="GBP">British Pound (£)</option>
+                            <option value="CAD">Canadian Dollar (C$)</option>
+                            <option value="AUD">Australian Dollar (A$)</option>
+                            <option value="SGD">Singapore Dollar (S$)</option>
+                            <option value="AED">UAE Dirham (د.إ)</option>
+                            <option value="JPY">Japanese Yen (¥)</option>
+                            <option value="CNY">Chinese Yuan (¥)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="purchase-row total-row">
+                        <label>Total Price:</label>
+                        <div class="price-display">
+                            <span id="convertedPrice">1.00</span>
+                            <span id="currencySymbol">$</span>
+                        </div>
+                        <div class="inr-note">(Actual payment in INR: ₹<span id="inrPrice">100</span>)</div>
+                    </div>
+                    
+                    <button id="buyCreditsEnhanced" class="pay-btn">
+                        <span class="btn-text">Buy Now</span>
                         <div class="icon-container">
                             <svg viewBox="0 0 24 24" class="icon card-icon"><path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18C2,19.11 2.89,20 4,20H20C21.11,20 22,19.11 22,18V6C22,4.89 21.11,4 20,4Z" fill="currentColor"></path></svg>
                             <svg viewBox="0 0 24 24" class="icon payment-icon"><path d="M2,17H22V21H2V17M6.25,7H9V6H6V3H18V6H15V7H17.75L19,17H5L6.25,7M9,10H15V8H9V10M9,13H15V11H9V13Z" fill="currentColor"></path></svg>
@@ -90,22 +123,17 @@
                                 <i class="far fa-calendar-alt"></i> {{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}
                                 {% if scan.credits_spent %} • <i class="fas fa-coins"></i> {{ scan.credits_spent }} credits{% endif %}
                             </div>
-
-                             <!-- Buttons container at the bottom -->
-    <div class="scan-buttons">
-        <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="{{ 'true' if is_ready else 'false' }}">
-            View Report
-        </button>
-        {% if is_ready %}
-            <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn">Download Report</a>
-        {% else %}
-            <button class="download-report-btn-disabled disabled-btn" disabled>Download Report</button>
-        {% endif %}
-    </div>
-
-                            <!-- Panel toggled by View Report button -->
+                            <div class="scan-buttons">
+                                <button class="toggle-report-details" data-scan-id="{{ scan.id }}" data-ready="{{ 'true' if is_ready else 'false' }}">
+                                    View Report
+                                </button>
+                                {% if is_ready %}
+                                    <a href="{{ url_for('download_report', job_id=scan.id) }}" class="download-report-btn">Download Report</a>
+                                {% else %}
+                                    <button class="download-report-btn-disabled disabled-btn" disabled>Download Report</button>
+                                {% endif %}
+                            </div>
                             <div id="scan-details-{{ scan.id }}" class="scan-details-panel" style="display: none;">
-                                <!-- Submission Details -->
                                 <div class="submitted-details">
                                     <h4><i class="fas fa-user-edit"></i> Submission Details</h4>
                                     <div class="details-grid">
@@ -119,8 +147,6 @@
                                         <div><strong>Status:</strong> {{ scan.status }}</div>
                                     </div>
                                 </div>
-
-                                <!-- Report Status and Content -->
                                 {% if is_ready %}
                                     <div class="report-status ready">
                                         <p>Report is ready. You can view it below.</p>
@@ -143,63 +169,190 @@
             {% endif %}
         </div>
 
-        <!-- Logout Button -->
         <div class="logout-container">
             <a href="{{ url_for('logout') }}" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
-   <footer>
-    <p>© 2026 Nexus Security. All rights reserved. | 
-        <a href="legal.html#terms">Terms</a> | 
-        <a href="legal.html#privacy">Privacy</a> | 
-        <a href="legal.html#refund">Refund</a> | 
-        <a href="legal.html#about">About</a> | 
-        <a href="legal.html#contact">Contact</a> | 
-        <a href="legal.html#pricing">Pricing</a>
-    </p>
-</footer>
+    <footer>
+        <p>© 2026 Nexus Security. All rights reserved. | 
+            <a href="legal.html#terms">Terms</a> | 
+            <a href="legal.html#privacy">Privacy</a> | 
+            <a href="legal.html#refund">Refund</a> | 
+            <a href="legal.html#about">About</a> | 
+            <a href="legal.html#contact">Contact</a> | 
+            <a href="legal.html#pricing">Pricing</a>
+        </p>
+    </footer>
 
     <script src="script.js"></script>
     <script>
+        // ========== CREDIT PURCHASE WITH 10 CREDITS = 1 USD DEFAULT ==========
+        const currencySymbols = {
+            INR: '₹', USD: '$', EUR: '€', GBP: '£', CAD: 'C$',
+            AUD: 'A$', SGD: 'S$', AED: 'د.إ', JPY: '¥', CNY: '¥'
+        };
+
+        // For USD: fixed rate 10 credits = $1.00
+        // For other currencies: base INR price for 10 credits = ₹100, then convert using live rates
+        const fallbackRates = {
+            INR: 1, USD: 0.012, EUR: 0.011, GBP: 0.0095,
+            CAD: 0.016, AUD: 0.018, SGD: 0.016, AED: 0.044,
+            JPY: 1.8, CNY: 0.087
+        };
+
+        async function updatePrice() {
+            const credits = parseInt(document.getElementById('creditAmount').value) || 10;
+            const currency = document.getElementById('currencySelect').value;
+            const inrPrice = credits * 10; // 1 credit = ₹10
+            document.getElementById('inrPrice').textContent = inrPrice;
+
+            let displayPrice;
+            let rate = 1;
+
+            if (currency === 'USD') {
+                // 10 credits = $1.00 exactly
+                displayPrice = (credits / 10).toFixed(2);
+            } else {
+                // For other currencies, convert from INR
+                try {
+                    const response = await fetch('https://open.er-api.com/v6/latest/INR');
+                    const data = await response.json();
+                    if (data.result === 'success' && data.rates[currency]) {
+                        rate = data.rates[currency];
+                    } else {
+                        rate = fallbackRates[currency];
+                    }
+                } catch (err) {
+                    console.warn('Using fallback exchange rates:', err);
+                    rate = fallbackRates[currency];
+                }
+                // Calculate price for the selected credits: (inrPrice * rate)
+                let rawPrice = inrPrice * rate;
+                // Round to 2 decimal places for most currencies, but for JPY etc. keep as integer if large
+                if (currency === 'JPY') {
+                    displayPrice = Math.round(rawPrice);
+                } else {
+                    displayPrice = rawPrice.toFixed(2);
+                }
+            }
+
+            document.getElementById('convertedPrice').textContent = displayPrice;
+            document.getElementById('currencySymbol').textContent = currencySymbols[currency];
+        }
+
+        async function handleBuyCredits() {
+            const credits = parseInt(document.getElementById('creditAmount').value);
+            if (credits < 10) {
+                alert('Minimum 10 credits required');
+                return;
+            }
+            const inrAmount = credits * 10;
+            const btn = document.getElementById('buyCreditsEnhanced');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: inrAmount, credits: credits })
+                });
+                const order = await response.json();
+                if (!order.order_id) throw new Error('Failed to create order');
+
+                const options = {
+                    key: order.key,
+                    amount: order.amount,
+                    currency: order.currency,
+                    name: 'Nexus Security',
+                    description: `Buy ${credits} credits (₹${inrAmount})`,
+                    order_id: order.order_id,
+                    prefill: {
+                        name: "{{ user.name }}",
+                        email: "{{ user.email }}"
+                    },
+                    theme: { color: '#2f9b9b' },
+                    modal: { backdropclose: false },
+                    handler: async function(response) {
+                        const verifyRes = await fetch('/api/verify-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                order_id: response.razorpay_order_id,
+                                payment_id: response.razorpay_payment_id,
+                                signature: response.razorpay_signature
+                            })
+                        });
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                            alert(verifyData.message);
+                            window.location.reload();
+                        } else {
+                            alert('Payment verification failed: ' + verifyData.message);
+                        }
+                    }
+                };
+                const rzp = new Razorpay(options);
+                rzp.open();
+                rzp.on('payment.failed', function(resp) {
+                    alert('Payment failed: ' + resp.error.description);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            // ========== Handle View Report button clicks ==========
+            // View Report toggle
             document.querySelectorAll('.toggle-report-details').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const scanId = btn.getAttribute('data-scan-id');
-                    const detailsPanel = document.getElementById(`scan-details-${scanId}`);
-                    if (detailsPanel.style.display === 'none') {
-                        detailsPanel.style.display = 'block';
+                    const panel = document.getElementById(`scan-details-${scanId}`);
+                    if (panel.style.display === 'none') {
+                        panel.style.display = 'block';
                         btn.textContent = 'Hide Report Details';
                     } else {
-                        detailsPanel.style.display = 'none';
+                        panel.style.display = 'none';
                         btn.textContent = 'View Report';
                     }
                 });
             });
 
-            // ========== Handle disabled download buttons ==========
-            const disabledDownloadBtns = document.querySelectorAll('.download-report-btn-disabled');
-            if (disabledDownloadBtns.length) {
-                function showToast(message, isError = true) {
+            // Disabled download buttons toast
+            const disabledBtns = document.querySelectorAll('.download-report-btn-disabled');
+            if (disabledBtns.length) {
+                function showToast(msg, isErr = true) {
                     const toast = document.createElement('div');
-                    toast.className = `message-toast ${isError ? 'error' : 'success'}`;
-                    toast.innerHTML = `
-                        <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
-                        <div class="message-text">${message}</div>
-                        <button class="close-message"><i class="fas fa-times"></i></button>
-                    `;
+                    toast.className = `message-toast ${isErr ? 'error' : 'success'}`;
+                    toast.innerHTML = `<i class="fas ${isErr ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i>
+                        <div class="message-text">${msg}</div>
+                        <button class="close-message"><i class="fas fa-times"></i></button>`;
                     document.body.appendChild(toast);
                     setTimeout(() => toast.remove(), 5000);
                     toast.querySelector('.close-message').onclick = () => toast.remove();
                 }
-                disabledDownloadBtns.forEach(btn => {
+                disabledBtns.forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.preventDefault();
                         showToast('Report is not ready yet. Please check back later.', true);
                     });
                 });
             }
+
+            // Credit purchase listeners
+            const creditInput = document.getElementById('creditAmount');
+            const currencySelect = document.getElementById('currencySelect');
+            const buyBtn = document.getElementById('buyCreditsEnhanced');
+            if (creditInput) creditInput.addEventListener('input', updatePrice);
+            if (currencySelect) currencySelect.addEventListener('change', updatePrice);
+            if (buyBtn) buyBtn.addEventListener('click', handleBuyCredits);
+            updatePrice(); // initial load
         });
     </script>
 </body>
