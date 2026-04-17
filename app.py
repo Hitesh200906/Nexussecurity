@@ -16,6 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import razorpay
 
 load_dotenv()
 
@@ -189,6 +190,84 @@ def send_email_via_brevo(to_email, subject, body):
     if response.status_code not in (200, 201):
         raise Exception(f"Brevo API error: {response.text}")
 
+# ---------- Razorpay Payment Integration ----------
+razorpay_client = razorpay.Client(auth=(os.getenv('RAZORPAY_KEY_ID'), os.getenv('RAZORPAY_KEY_SECRET')))
+
+@app.route('/api/create-order', methods=['POST'])
+@login_required
+def create_order():
+    data = request.get_json()
+    credits = data.get('credits')
+    amount = data.get('amount')  # amount in INR
+    
+    if not credits or not amount:
+        return jsonify({'success': False, 'message': 'Invalid request'}), 400
+    
+    # Convert amount to paise (Razorpay expects paise)
+    amount_paise = int(amount * 100)
+    
+    try:
+        order_data = {
+            'amount': amount_paise,
+            'currency': 'INR',
+            'receipt': f'credits_{current_user.id}_{int(datetime.utcnow().timestamp())}',
+            'payment_capture': 1
+        }
+        order = razorpay_client.order.create(order_data)
+        
+        # Store transaction in database
+        transaction = Transaction(
+            user_id=current_user.id,
+            amount=amount,
+            credits_added=credits,
+            razorpay_order_id=order['id'],
+            status='pending'
+        )
+        db.session.add(transaction)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'order_id': order['id'],
+            'amount': amount,
+            'currency': 'INR',
+            'key': os.getenv('RAZORPAY_KEY_ID')
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/verify-payment', methods=['POST'])
+@login_required
+def verify_payment():
+    data = request.get_json()
+    order_id = data.get('order_id')
+    payment_id = data.get('payment_id')
+    signature = data.get('signature')
+    
+    try:
+        # Verify signature
+        params_dict = {
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': signature
+        }
+        razorpay_client.utility.verify_payment_signature(params_dict)
+        
+        # Find transaction
+        transaction = Transaction.query.filter_by(razorpay_order_id=order_id, user_id=current_user.id).first()
+        if not transaction:
+            return jsonify({'success': False, 'message': 'Transaction not found'}), 404
+        
+        # Update transaction and add credits to user
+        transaction.razorpay_payment_id = payment_id
+        transaction.status = 'completed'
+        current_user.credits = (current_user.credits or 0) + transaction.credits_added
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': f'Added {transaction.credits_added} credits to your account!'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
 # ---------- Auth Routes (Supabase) ----------
 @app.route('/login')
 def login():
@@ -253,15 +332,12 @@ def api_register():
     
     # Check if user already exists in Supabase
     try:
-        # Try to sign in (will fail but we check error message)
         supabase.auth.sign_in_with_password({"email": email, "password": "dummy"})
     except Exception as e:
         error_str = str(e)
         if 'Invalid login credentials' in error_str or 'User not found' in error_str:
-            # User does not exist, proceed
             pass
         else:
-            # Other error (e.g., network) - but assume user doesn't exist
             pass
     
     # Generate a 6-digit code
@@ -304,7 +380,6 @@ def verify_email_code():
     if not pending:
         return jsonify({'success': False, 'message': 'No pending registration. Please start over.'}), 400
     
-    # Check expiry
     if datetime.utcnow().timestamp() > pending['expires']:
         session.pop('pending_signup', None)
         return jsonify({'success': False, 'message': 'Verification code expired. Please register again.'}), 400
@@ -312,7 +387,6 @@ def verify_email_code():
     if code != pending['code']:
         return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
     
-    # Code correct – create user in Supabase
     name = pending['name']
     email = pending['email']
     password = pending['password']
