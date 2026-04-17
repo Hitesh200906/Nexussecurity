@@ -198,24 +198,31 @@ razorpay_client = razorpay.Client(auth=(os.getenv('RAZORPAY_KEY_ID'), os.getenv(
 def create_order():
     data = request.get_json()
     credits = data.get('credits')
-    amount = data.get('amount')  # amount in INR
+    amount = data.get('amount')          # amount in the selected currency
+    currency = data.get('currency', 'INR')  # default INR
     
     if not credits or not amount:
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
     
-    # Convert amount to paise (Razorpay expects paise)
-    amount_paise = int(amount * 100)
+    # Convert amount to smallest currency unit
+    if currency == 'INR':
+        amount_paise = int(amount * 100)   # paise
+    elif currency == 'JPY':
+        amount_paise = int(amount)         # JPY has no subunit
+    else:
+        # For USD, EUR, GBP, etc. – amount is in dollars/euros, convert to cents
+        amount_paise = int(amount * 100)
     
     try:
         order_data = {
             'amount': amount_paise,
-            'currency': 'INR',
+            'currency': currency,
             'receipt': f'credits_{current_user.id}_{int(datetime.utcnow().timestamp())}',
             'payment_capture': 1
         }
         order = razorpay_client.order.create(order_data)
         
-        # Store transaction in database
+        # Store transaction in database (store amount in original currency)
         transaction = Transaction(
             user_id=current_user.id,
             amount=amount,
@@ -230,7 +237,7 @@ def create_order():
             'success': True,
             'order_id': order['id'],
             'amount': amount,
-            'currency': 'INR',
+            'currency': currency,
             'key': os.getenv('RAZORPAY_KEY_ID')
         })
     except Exception as e:
@@ -1034,4 +1041,5 @@ def test_email():
         return f'❌ Error: {str(e)}'
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
