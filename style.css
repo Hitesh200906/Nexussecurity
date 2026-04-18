@@ -3298,8 +3298,170 @@ footer a:hover {
     }
 }
 
+/* ============================================
+   PROFESSIONAL FOOTER - QUICK LINKS SCALE ON HOVER
+   ============================================ */
 
+.main-footer {
+    background: linear-gradient(135deg, #0a0a0f 0%, #000000 100%);
+    border-top: 1px solid rgba(47, 155, 155, 0.3);
+    padding: 2rem 2rem 1rem;
+    margin-top: 3rem;
+}
 
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.footer-section {
+    flex: 1;
+    min-width: 200px;
+}
+
+.footer-section h4 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+/* Payment icons in a horizontal row */
+.payment-icons-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.payment-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    transition: transform 0.2s ease;
+}
+
+.payment-item:hover {
+    transform: translateY(-3px);
+}
+
+.payment-item i {
+    font-size: 1.8rem;
+}
+
+.payment-item span {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* Brand colors for payment icons */
+.payment-item i.fa-cc-visa { color: #1A1F71; }
+.payment-item i.fa-cc-mastercard { color: #EB001B; }
+.payment-item i.fa-cc-amex { color: #006FCF; }
+.payment-item i.fa-credit-card { color: #0F7B8A; }
+.payment-item i.fa-mobile-alt { color: #48BB78; }
+.payment-item i.fa-university { color: #F6AD55; }
+.payment-item i.fa-wallet { color: #9F7AEA; }
+
+/* Currencies - 2 per row */
+.currency-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+}
+
+.currency-grid span {
+    background: rgba(47, 155, 155, 0.08);
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: 1px solid rgba(47, 155, 155, 0.2);
+    transition: all 0.2s ease;
+    text-align: center;
+    cursor: default;
+}
+
+.currency-grid span:hover {
+    background: rgba(47, 155, 155, 0.2);
+    color: var(--accent);
+    transform: translateY(-2px);
+}
+
+/* Quick Links - Scale on hover, NO underline */
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li {
+    margin-bottom: 0.6rem;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;      /* No underline */
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.footer-links a:hover {
+    color: var(--accent);
+    transform: scale(1.05);     /* Increase size on hover */
+    text-decoration: none;      /* Ensure no underline */
+}
+
+/* Footer Bottom */
+.footer-bottom {
+    text-align: center;
+    padding-top: 1.8rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid rgba(47, 155, 155, 0.15);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .main-footer {
+        padding: 1.5rem 1rem 1rem;
+    }
+    .footer-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    .payment-icons-row {
+        justify-content: center;
+    }
+    .currency-grid {
+        max-width: 250px;
+        margin: 0 auto;
+    }
+    .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+    .footer-links li {
+        margin-bottom: 0;
+    }
+    .footer-links a:hover {
+        transform: scale(1.05);
+    }
+}
 
 
 
