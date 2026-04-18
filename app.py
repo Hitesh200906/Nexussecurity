@@ -432,7 +432,7 @@ def public_credit_costs():
     return jsonify(get_credit_costs())
 
 # ---------- Friend's AI Scanner Integration ----------
-JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://monitor-oops-powerpoint-meyer.trycloudflare.com')
+JATIN_API_URL = os.getenv('JATIN_API_URL', 'https://riverbank-deranged-define.ngrok-free.dev')
 CALLBACK_URL = os.getenv('CALLBACK_URL', 'https://nexussecurity.onrender.com/api/scan-callback')
 
 def send_to_friend_scanner(scan_id, url, plan, user_email):
